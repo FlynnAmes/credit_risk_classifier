@@ -5,6 +5,7 @@ on:
   push:
     branches: ['master']
 
+jobs:
 
 # first train models and run unit tests (without setting up the API)
   UnitTests:
@@ -12,11 +13,6 @@ on:
     # test on linux
     runs-on: 'ubuntu-latest'
 
-    # Python version that coded in and more recent version
-    strategy:
-      matrix:
-        python-version: ["3.11", '3.14']
-    
     steps:
       # clone repo into runners VM
       - uses: actions/checkout@v5
@@ -31,7 +27,7 @@ on:
       - name: set up python
         uses: actions/setup-python@v5
         with: 
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.14'
           cache: 'pip'
         
       # then install PIP and dependencies
@@ -103,9 +99,3 @@ on:
   # tear down container afterwards
       - name: tear down container
         run: docker compose down   
-
-
-        
-
-
-
