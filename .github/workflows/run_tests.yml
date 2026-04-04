@@ -26,7 +26,9 @@ jobs:
       - name: set up kaggle keys
         run: |
           mkdir -p ~/.kaggle
-          echo '{"KAGGLE_USERNAME": "${{ secrets.KAGGLE_API_TOKEN }}"}' > ~/.kaggle/kaggle.json
+          echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}"}' > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+          
       - name: set up python
         uses: actions/setup-python@v5
         with: 
@@ -42,9 +44,9 @@ jobs:
         # now to clean and ingest data, train model and 
       - name: get data and train models
         run: |
-          python clean_and_ingest_data.py
-          python train.py
-          python tune.py
+          python src/clean_and_ingest_data.py
+          python src/train.py
+          python src/tune.py
       
       # now run tests with Pytest
       - name: do units tests
@@ -69,20 +71,25 @@ jobs:
       - name: wait for server to be ready
         run: |
           for i in {1..30}; do
-             curl http://127.0.0.1:8000/health && break
-             echo 'check for containers'
-             docker ps -a
-             echo 'docker logs'
-             docker logs credit_risk_container
-             sleep 5
+            curl http://127.0.0.1:8000/health
+
+            if [[ $? -eq 0 ]] ; then
+              break
+            else
+              echo 'check for running containers'
+              docker ps -a
+              echo ' check docker logs'
+              docker logs credit_risk_container
+              sleep 5
+            fi
           done
   
       # get data and train the models
       - name: get data and train
         run: |
-          docker exec -i credit_risk_container python clean_and_ingest_data.py
-          docker exec -i credit_risk_container python train.py
-          docker exec -i credit_risk_container python tune.py
+          docker exec -i credit_risk_container python src/clean_and_ingest_data.py
+          docker exec -i credit_risk_container python src/train.py
+          docker exec -i credit_risk_container python src/tune.py
       # now run test file using pytest
       - name: Run tests using pytest
         run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
