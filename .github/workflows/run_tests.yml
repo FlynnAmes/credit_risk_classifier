@@ -5,10 +5,8 @@ on:
   push:
     branches: ['master']
 
-jobs: 
 
-
-# first run the unit tests (without API setup)
+# first train models and run unit tests (without setting up the API)
   UnitTests:
 
     # test on linux
@@ -53,15 +51,22 @@ jobs:
           python -m credit_risk_classifier.train
           python -m credit_risk_classifier.tune
 
+      # save model artifacts for integration test
+      - name: upload model artifacts
+        uses: actions/upload-artifact@v4
+        with: 
+          name: trained-models
+          path: models/
+
       # now run tests with Pytest
       - name: do units tests
         run: |
           python -m pytest tests/ -m unit
       
-  # Integration test wit container
-  # test that works when set up docker
+  # Then test full integration and that API works
   IntegrationTests:
-
+      # ensures that only starts after model artifacts saved
+      needs: UnitTests
   # test on linux only for now
       runs-on: ubuntu-latest
 
@@ -69,35 +74,12 @@ jobs:
   # first clone the repo into the runner's VM
       - uses: actions/checkout@v5
 
-      # then set up the Kaggle API keys
-      - name: set up kaggle keys
-        run: |
-          mkdir -p ~/.kaggle
-          echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
-          chmod 600 ~/.kaggle/kaggle.json
-
-      - name: set up python
-        uses: actions/setup-python@v5
-        with: 
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-        
-      # then install PIP and dependencies
-      - name: install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      # install project as a package
-      - name: install project
-        run: pip install -e .
-
-        # now to clean and ingest data, train model and 
-      - name: get data and train models
-        run: |
-          python -m credit_risk_classifier.ingest_and_clean_data
-          python -m credit_risk_classifier.train
-          python -m credit_risk_classifier.tune
+     # load in saved model artifacts
+      - name: download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-models
+          path: models/
 
   # set up the container
       - name: Start container
@@ -115,12 +97,6 @@ jobs:
           echo ' check docker logs'
             docker logs credit_risk_container
   
-      # get data and train the models
-      - name: get data and train
-        run: |
-          docker exec -i credit_risk_container python src/ingest_and_clean_data.py
-          docker exec -i credit_risk_container python src/train.py
-          docker exec -i credit_risk_container python src/tune.py
       # now run test file using pytest
       - name: Run tests using pytest
         run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
