@@ -51,11 +51,11 @@ jobs:
           ls -la
           echo "Src contents:"
           ls -la src || echo "src not found"
-          
+
         # now to clean and ingest data, train model and 
       - name: get data and train models
         run: |
-          python src/clean_and_ingest_data.py
+          python src/ingest_and_clean_data.py
           python src/train.py
           python src/tune.py
       
@@ -81,9 +81,9 @@ jobs:
   # Check server is ready, once the case then move on
       - name: wait for server to be ready
         run: |
-          for i in {1..30}; do
+          for i in {1..10}; do
             curl http://127.0.0.1:8000/health && break || echo "attempt $i failed, retrying"
-            sleep 5
+            sleep 6
           done
 
           echo 'check running containers'
@@ -94,7 +94,7 @@ jobs:
       # get data and train the models
       - name: get data and train
         run: |
-          docker exec -i credit_risk_container python src/clean_and_ingest_data.py
+          docker exec -i credit_risk_container python src/ingest_and_clean_data.py
           docker exec -i credit_risk_container python src/train.py
           docker exec -i credit_risk_container python src/tune.py
       # now run test file using pytest
