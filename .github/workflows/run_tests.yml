@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./
+        working-directory: .
 
     # Python version that coded in and more recent version
     strategy:
@@ -67,7 +67,7 @@ jobs:
 
       defaults:
       run:
-        working-directory: ./
+        working-directory: .
       
       steps:
   # first clone the repo into the runner's VM
