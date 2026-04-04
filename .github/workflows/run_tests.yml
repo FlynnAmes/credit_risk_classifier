@@ -27,7 +27,7 @@ jobs:
       - name: set up kaggle keys
         run: |
           mkdir -p ~/.kaggle
-          echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}"}' > ~/.kaggle/kaggle.json
+          echo '{"key": "${{ secrets.KAGGLE_API_TOKEN, "username": "${{ secrets.KAGGLE_USERNAME }}" }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
       - name: set up python
