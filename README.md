@@ -34,7 +34,7 @@ loan application workflow.
 ├── models/                        # trained model artifacts (gitignored except one demo artifact)
 ├── notebooks/                     # exploratory analysis
 │
-├── src/                           # training, validation, and inference code
+├── src/credit_risk_classifier/    # training, validation, and inference code
 │   ├── app.py
 │   ├── inference.py
 │   ├── ingest_and_clean_data.py
@@ -56,7 +56,7 @@ loan application workflow.
 ```
 
 
-Models, processed data, and logs are excluded from version control. <br>
+Models (excluding one demo artifact), processed data, and logs are excluded from version control. <br>
 All artifacts can be regenerated using the training pipeline.
 
 ## Data
@@ -133,10 +133,10 @@ In the repository directory, run the following commands in order to get the serv
 ```
 pip install -r requirements.txt
 pip install -e .
-uvicorn src.app:app
+uvicorn credit_risk_classifier.app:app
 ```
 
-## Future improvements
+## Future extensions
 
 - Use inference logs for monitoring model performance and detecting data drift
 - Model versioning and experimeny tracking using MLflow
