@@ -7,10 +7,22 @@ import pandas as pd
 from scipy.stats import zscore
 from sklearn.model_selection import train_test_split
 import pickle as pkl
+from kaggle.api.kaggle_api_extended import KaggleApi
 from src.paths import CONFIG_PATH, DATA_PATH, LOGS_PATH
 
 
-#TODO: rename validate data to test data (to match neural net naming convention)
+def load_data_from_kaggle():
+    """ load data to raw data directory from kaggle"""
+
+    # instance of kaggle API
+    api = KaggleApi()
+    # authenticate API keys (note that will need to set up in environment)
+    api.authenticate()
+    # download the csv file and save to raw data directory
+    api.dataset_download_files("adilshamim8/credit-risk-benchmark-dataset", path=DATA_PATH / 'raw', unzip=True)
+    # rename file to put underscores in place of spaces
+    os.rename(DATA_PATH / 'raw' / 'Credit Risk Benchmark Dataset.csv', DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv')
+
 
 def ingest_and_clean_data(config_path):
 
@@ -22,6 +34,11 @@ def ingest_and_clean_data(config_path):
     train_size = config['train_size']
     train_prop_no_tune = config['train_prop_no_tune']
 
+
+    # if data no exist, then load it from Kaggle
+    if not os.path.exists(DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv'):
+        load_data_from_kaggle()
+        print('\n Data loaded from Kaggle')
 
     # load in data
     df = pd.read_csv(DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv')
@@ -67,9 +84,9 @@ def ingest_and_clean_data(config_path):
                         'tuning': y_tune.mean(),
                         'validation': y_validate.mean()}
 
-    #TODO: do cleaner way to log data version, so that can configure which to use
-    # create directory for logs of data version if not already created
+    # makde directories for processed data, as well as associated logs
     os.makedirs(LOGS_PATH / 'data' / '_v1', exist_ok=True)
+    os.makedirs(DATA_PATH / 'processed', exist_ok=True)
 
     # dump class balance metrics to data log
     with open(LOGS_PATH / 'data' / '_v1' / 'data_balance.json', 'w') as f:
