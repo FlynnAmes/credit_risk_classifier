@@ -13,7 +13,12 @@ jobs:
 
     # test on linux
     runs-on: 'ubuntu-latest'
-    # Pyhton version that coded in and more recent version
+
+    defaults:
+      run:
+        working-directory: ./
+
+    # Python version that coded in and more recent version
     strategy:
       matrix:
         python-version: ["3.11", '3.14']
@@ -28,7 +33,7 @@ jobs:
           mkdir -p ~/.kaggle
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
-          
+
       - name: set up python
         uses: actions/setup-python@v5
         with: 
@@ -60,6 +65,10 @@ jobs:
   # test on linux only for now
       runs-on: ubuntu-latest
 
+      defaults:
+      run:
+        working-directory: ./
+      
       steps:
   # first clone the repo into the runner's VM
       - uses: actions/checkout@v5
@@ -67,22 +76,18 @@ jobs:
   # set up the container
       - name: Start container
         run: docker compose up -d
-  # loop to wait for server to be ready
+  # Check server is ready, once the case then move on
       - name: wait for server to be ready
         run: |
           for i in {1..30}; do
-            curl http://127.0.0.1:8000/health
-
-            if [[ $? -eq 0 ]] ; then
-              break
-            else
-              echo 'check for running containers'
-              docker ps -a
-              echo ' check docker logs'
-              docker logs credit_risk_container
-              sleep 5
-            fi
+            curl http://127.0.0.1:8000/health && break || echo "attempt $i failed, retrying"
+            sleep 5
           done
+
+          echo 'check running containers'
+            docker ps -a
+          echo ' check docker logs'
+            docker logs credit_risk_container
   
       # get data and train the models
       - name: get data and train
