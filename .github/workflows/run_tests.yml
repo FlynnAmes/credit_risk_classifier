@@ -42,9 +42,9 @@ jobs:
         # now to clean and ingest data, train model and 
       - name: get data and train models
         run: |
-          python -m src.clean_and_ingest_data
-          python -m src.train
-          python -m src.tune
+          python -m clean_and_ingest_data.py
+          python -m train.py
+          python -m tune.py
       
       # now run tests with Pytest
       - name: do units tests
@@ -80,9 +80,9 @@ jobs:
       # get data and train the models
       - name: get data and train
         run: |
-          docker exec -i credit_risk_container python -m src.clean_and_ingest_data
-          docker exec -i credit_risk_container python -m src.train
-          docker exec -i credit_risk_container python -m src.tune
+          docker exec -i credit_risk_container python -m clean_and_ingest_data.py
+          docker exec -i credit_risk_container python -m train.py
+          docker exec -i credit_risk_container python -m tune.py
       # now run test file using pytest
       - name: Run tests using pytest
         run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
