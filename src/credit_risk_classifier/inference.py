@@ -4,7 +4,7 @@ For now just returns the binary prediction about whether delinquent or not """
 
 import pandas as pd
 import numpy as np
-from src.schemas import features
+from credit_risk_classifier.schemas import features
 
 
 def return_inference(input_features, model_object):

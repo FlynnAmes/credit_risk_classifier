@@ -1,7 +1,7 @@
 """ unit tests for testing API """
 
 import pytest
-from src.app import app
+from credit_risk_classifier.app import app
 from fastapi.testclient import TestClient
 
 @pytest.mark.unit

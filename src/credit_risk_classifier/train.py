@@ -15,7 +15,7 @@ import pickle as pkl
 import yaml
 import json
 from datetime import datetime
-from src.paths import LOGS_PATH, MODELS_PATH, CONFIG_PATH, DATA_PATH
+from credit_risk_classifier.paths import LOGS_PATH, MODELS_PATH, CONFIG_PATH, DATA_PATH
 
 ###########
 # functions
@@ -176,9 +176,6 @@ def train_models(config_path):
         log_training_params(clf=clf, model_name=model_name)
 
         print('params logged', '\n')
-        print('best parameters: \n', clf.best_params_, '\n')
-
-
 
 
 # if script run, then train the models!

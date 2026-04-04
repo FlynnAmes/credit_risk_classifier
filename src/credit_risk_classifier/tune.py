@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import yaml
 import json
-from src.paths import MODELS_PATH, CONFIG_PATH, DATA_PATH, LOGS_PATH
+from credit_risk_classifier.paths import MODELS_PATH, CONFIG_PATH, DATA_PATH, LOGS_PATH
 from glob import glob
 import pickle as pkl
 from sklearn.metrics import fbeta_score, make_scorer

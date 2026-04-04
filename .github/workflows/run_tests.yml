@@ -23,7 +23,23 @@ jobs:
       # clone repo into runners VM
       - uses: actions/checkout@v5
 
-      # then set up the Kaggle API keys
+      # now run tests with Pytest
+      - name: do units tests
+        run: |
+          python -m pytest tests/ -m unit
+      
+  # Integration test wit container
+  # test that works when set up docker
+  IntegrationTests:
+
+  # test on linux only for now
+      runs-on: ubuntu-latest
+
+      steps:
+  # first clone the repo into the runner's VM
+      - uses: actions/checkout@v5
+
+        # then set up the Kaggle API keys
       - name: set up kaggle keys
         run: |
           mkdir -p ~/.kaggle
@@ -42,38 +58,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-
-      - name: inspect repo
-        run: |
-          echo "Current dir:"
-          pwd
-          echo "Contents:"
-          ls -la
-          echo "Src contents:"
-          ls -la src || echo "src not found"
+      # install project as a package
+      - name: install project
+          run: pip install -e .
 
         # now to clean and ingest data, train model and 
       - name: get data and train models
         run: |
-          python src/ingest_and_clean_data.py
-          python src/train.py
-          python src/tune.py
-      
-      # now run tests with Pytest
-      - name: do units tests
-        run: |
-          python -m pytest tests/ -m unit
-      
-  # Integration test wit container
-  # test that works when set up docker
-  IntegrationTests:
-
-  # test on linux only for now
-      runs-on: ubuntu-latest
-
-      steps:
-  # first clone the repo into the runner's VM
-      - uses: actions/checkout@v5
+          python -m credit_risk_classifier.ingest_and_clean_data
+          python -m credit_risk_classifier.train
+          python -m credit_risk_classifier.tune
 
   # set up the container
       - name: Start container

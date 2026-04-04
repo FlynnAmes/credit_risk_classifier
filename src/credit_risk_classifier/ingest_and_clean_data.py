@@ -8,7 +8,7 @@ from scipy.stats import zscore
 from sklearn.model_selection import train_test_split
 import pickle as pkl
 from kaggle.api.kaggle_api_extended import KaggleApi
-from src.paths import CONFIG_PATH, DATA_PATH, LOGS_PATH
+from credit_risk_classifier.paths import CONFIG_PATH, DATA_PATH, LOGS_PATH
 
 
 def load_data_from_kaggle():

@@ -8,5 +8,8 @@ version = "0.1.0"
 description = "An application that predicts default on a loan"
 requires-python = ">=3.11"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]

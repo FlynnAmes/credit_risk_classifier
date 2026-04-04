@@ -10,7 +10,7 @@ from sklearn.metrics import classification_report, brier_score_loss
 import timeit
 from datetime import datetime
 import json
-from src.paths import LOGS_PATH, MODELS_PATH, DATA_PATH
+from credit_risk_classifier.paths import LOGS_PATH, MODELS_PATH, DATA_PATH
 
 ##########
 # functions

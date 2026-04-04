@@ -2,7 +2,7 @@
 # first get the base image. 
 FROM python:3.11-slim
 
-# set working directory to project dir for now (will create seperate folder for app.py in future)
+# set working directory
 WORKDIR /app
 
 # copy requirements file from host to container
@@ -15,9 +15,12 @@ RUN pip install -r requirements.txt
 # now copy remaining files to working directory
 COPY . .
 
+# create package out of the project
+RUN pip install -e .
+
 # set python path explictly to the workdir
 ENV PYTHONPATH=/app
 
 # start the application inside the container tell uvicorn to map port 8000 in container
 # to port 8000 on host
-CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "credit_risk_classifier.app:app", "--host", "0.0.0.0", "--port", "8000"]

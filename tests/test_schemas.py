@@ -1,7 +1,7 @@
 """ Tests for input and output schemas using pytest """
 
 import pytest
-from src.schemas import features, prediction
+from credit_risk_classifier.schemas import features, prediction
 from pydantic import ValidationError
 
 @pytest.mark.unit

@@ -3,9 +3,9 @@
 from fastapi import FastAPI
 from fastapi import HTTPException
 from contextlib import asynccontextmanager
-from src.schemas import features, prediction
-from src.inference import return_inference
-from src.paths import MODELS_PATH, CONFIG_PATH, LOGS_PATH
+from credit_risk_classifier.schemas import features, prediction
+from credit_risk_classifier.inference import return_inference
+from credit_risk_classifier.paths import MODELS_PATH, CONFIG_PATH, LOGS_PATH
 import pickle as pkl
 import os
 import yaml
