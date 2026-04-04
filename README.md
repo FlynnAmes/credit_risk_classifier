@@ -31,7 +31,7 @@ loan application workflow.
 │   └── raw/   
 │  
 ├── logs/                          # training, validation, and inference logs (gitignored)
-├── models/                        # trained model artifacts (gitignored)
+├── models/                        # trained model artifacts (gitignored except one demo artifact)
 ├── notebooks/                     # exploratory analysis
 │
 ├── src/                           # training, validation, and inference code

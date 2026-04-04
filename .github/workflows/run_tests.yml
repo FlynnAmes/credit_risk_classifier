@@ -78,7 +78,7 @@ jobs:
           path: models/
 
   # set up the container
-      - name: Start container
+      - name: start container
         run: docker compose up -d
   # Check server is ready, once the case then move on
       - name: wait for server to be ready
@@ -94,7 +94,7 @@ jobs:
             docker logs credit_risk_container
   
       # now run test file using pytest
-      - name: Run tests using pytest
+      - name: run tests using pytest
         run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
   # tear down container afterwards
       - name: tear down container

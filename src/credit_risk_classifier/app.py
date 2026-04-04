@@ -25,6 +25,15 @@ def load_production_model():
     model_type = config['production_model_type']
     threshold_type = config['production_threshold_type']
 
+    # path to model
+    model_path = MODELS_PATH / 'tuned' / model_type / (threshold_type + '.pkl')
+
+    # check that the model exists
+    if not os.path.exists(model_path):
+        raise RuntimeError(
+            f"model {model_type + '/' + threshold_type + '.pkl' } not found. Either run training scripts or use provided pretrained model."
+        )
+
     # then load in and return specified classifier object
     with open(MODELS_PATH / 'tuned' / model_type / (threshold_type + '.pkl'), 'rb') as f:
         return pkl.load(f)

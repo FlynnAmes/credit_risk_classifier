@@ -4,8 +4,12 @@ data/
 # logs
 logs/
 
-# model artifacts
-models/
+# model artifacts ((manual subdir sepcification because want to specify exceptions)
+models/pretuning
+models/tuned/lr*
+# do commit the xgb model versions
+models/tuned/xgb/*
+!models/tuned/xgb/standard.pkl
 
 # plots
 plots/
