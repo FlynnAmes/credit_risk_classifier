@@ -1,5 +1,6 @@
 ## Overview
 
+![CI](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/run_tests.yml/badge.svg?event=push)
 
 This project implements an end-to-end machine learning system for predicting
 loan default risk. 
