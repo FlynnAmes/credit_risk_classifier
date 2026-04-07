@@ -16,6 +16,28 @@ from io import BytesIO
 from mangum import Mangum
 
 
+
+def setup_logger():
+    """ set up loger for logging to cloudwatch """
+
+    # set up default logger
+    logger = logging.getLogger()
+    logger.setLevel('INFO')
+    console_handler = logging.StreamHandler()
+    logger.addHandler(console_handler)
+
+    # set formatter for logging
+    formatter = logging.Formatter(fmt='{asctime} - {message}',
+                        style='{',
+                        datefmt='%Y%m%d %H%M')
+    
+    console_handler.setFormatter(formatter)
+    
+    return logger
+
+# create logger at module level
+logger = setup_logger()
+
 def load_production_model():
     """ loads model from S3 from AWS """
     #TODO: make key on AWS so that other models could be used if stored there
@@ -25,8 +47,14 @@ def load_production_model():
     # get the model object using an s3 client
     model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier', Key='standard.pkl')
 
+    logger.info('model object retrieved')
     # then get the model by passing through BytesIO, and loading via pickle
-    return pkl.load(BytesIO(model_obj['Body'].read()))
+    body = model_obj['Body'].read()
+    logger.info(f'S3 download complete, size: {len(body)} bytes')
+
+    model = pkl.load(BytesIO(body))
+    logger.info('pickle deserialisation completed')
+    return model
 
 
 
@@ -55,25 +83,6 @@ def load_production_model():
 #     with open(MODELS_PATH / 'tuned' / model_type / (threshold_type + '.pkl'), 'rb') as f:
 #         return pkl.load(f)
 
-
-# set up more simple logger not dependant upon paths
-def setup_logger():
-    """ set up loger for logging to cloudwatch """
-
-    # set up default logger
-    logger = logging.getLogger()
-    logger.setLevel('INFO')
-    console_handler = logging.StreamHandler()
-    logger.addHandler(console_handler)
-
-    # set formatter for logging
-    formatter = logging.Formatter(fmt='{asctime} - {message}',
-                        style='{',
-                        datefmt='%Y%m%d %H%M')
-    
-    console_handler.setFormatter(formatter)
-    
-    return logger
 
 # def setup_logger():
 #     """ create logger used to log inference outputs """
@@ -117,16 +126,20 @@ def setup_logger():
 # # set up instance of API class
 # app = FastAPI(lifespan=lifespan)
 
-# load in model and logger at module level
+# load in model at module level
+logger.info('about to load the model')
 model = load_production_model()
-logger = setup_logger()
+logger.info('model loaded succesfully')
 
 # set up app without lifespan, for lambda integration
 app = FastAPI()
 
 # set mangum handler to enable running in AWS environment
 handler = Mangum(app, lifespan='off')
+logger.info('handler correctly set up')
 
+# print type of model
+logger.info(f'model type: {type(model)}')
 
 # function to process POST request to 
 @app.post('/predict')

@@ -61,7 +61,7 @@ def save_model(clf, model_name):
 
     # and save the model to this directory
     with open(MODELS_PATH / 'pretuning' / (model_name + '.pkl'), 'wb') as f:
-        pkl.dump(clf, f)
+        pkl.dump(clf.best_estimator_, f)
 
 
 def train_models(config_path):
