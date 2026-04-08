@@ -82,7 +82,8 @@ jobs:
         
         # install project as a package
       - name: install project
-        run: pip install -e .
-
-        # run the integration tests
-        run: python -m pytest tests/ -m integration
+        run: |
+          pip install -e .
+      - name: run integration tests
+        run: |
+          python -m pytest tests/ -m integration
