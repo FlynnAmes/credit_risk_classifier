@@ -37,8 +37,11 @@ def setup_logger():
 
 # create logger at module level
 logger = setup_logger()
+# define path of model in tmp
+MODEL_CACHE_PATH = '/tmp/production_model.pkl'
 
-def load_production_model():
+
+def load_model_from_S3():
     """ loads model from S3 from AWS """
     #TODO: make key on AWS so that other models could be used if stored there
     #TODO: use joblib to save models instead?
@@ -46,17 +49,48 @@ def load_production_model():
 
     # get the model object using an s3 client
     model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier', Key='standard.pkl')
-
-    logger.info('model object retrieved')
     # then get the model by passing through BytesIO, and loading via pickle
     body = model_obj['Body'].read()
-    logger.info(f'S3 download complete, size: {len(body)} bytes')
-
     model = pkl.load(BytesIO(body))
-    logger.info('pickle deserialisation completed')
+
     return model
 
 
+def save_model_to_cache(model_object):
+    """ save model to cache on lambda, so future API calls have a warm start """
+
+    with open(MODEL_CACHE_PATH, 'wb') as f:
+        pkl.dump(model_object, f)
+
+
+def load_production_model():
+    """ load production model, either from S3 (cold start) and caching in tmp. 
+        If model already cached, then load from the cache (warm start) """
+
+    # if model is not cached, then load and cache it
+    if not os.path.exists(MODEL_CACHE_PATH):
+        # load model
+        model = load_model_from_S3()
+        logger.info('model loaded from S3')
+        # and cache it for future use
+        try:
+            save_model_to_cache(model)
+            logger.info('model saved to cache')
+        except Exception as e:
+            logger.warning(f'save to cache failed with exception {e}')
+
+    else:
+        # otherwise, try loading from cache
+        try:
+            with open(MODEL_CACHE_PATH, 'rb') as f:
+                model = pkl.load(f)
+
+        except Exception as e:
+            logger.warning(f'model load from cache failed with exception {e}. Loading from S3 instead')
+            model = load_model_from_S3()
+    
+    return model
+            
 
 # def load_production_model():
 #     """ function to load model during app startup, given config params specifying 
@@ -127,16 +161,14 @@ def load_production_model():
 # app = FastAPI(lifespan=lifespan)
 
 # load in model at module level
-logger.info('about to load the model')
 model = load_production_model()
-logger.info('model loaded succesfully')
+logger.info('model loading completed')
 
 # set up app without lifespan, for lambda integration
 app = FastAPI()
 
 # set mangum handler to enable running in AWS environment
 handler = Mangum(app, lifespan='off')
-logger.info('handler correctly set up')
 
 # print type of model
 logger.info(f'model type: {type(model)}')
