@@ -58,44 +58,72 @@ jobs:
       - name: do units tests
         run: |
           python -m pytest tests/ -m unit
-      
-  # Then test full integration and that API works
-  IntegrationTests:
-      # ensures that only starts after model artifacts saved
-      needs: UnitTests
-  # test on linux only for now
+  
+  # test that can get response from API on aws
+  awsIntegrationTests:
+      # test on linux only for now
       runs-on: ubuntu-latest
 
       steps:
   # first clone the repo into the runner's VM
       - uses: actions/checkout@v5
-
-     # load in saved model artifacts
-      - name: download model artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: trained-models
-          path: models/
-
-  # set up the container
-      - name: start container
-        run: docker compose up -d
-  # Check server is ready, once the case then move on
-      - name: wait for server to be ready
-        run: |
-          for i in {1..10}; do
-            curl http://127.0.0.1:8000/health && break || echo "attempt $i failed, retrying"
-            sleep 6
-          done
-
-          echo 'check running containers'
-            docker ps -a
-          echo ' check docker logs'
-            docker logs credit_risk_container
   
-      # now run test file using pytest
-      - name: run tests using pytest
-        run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
-  # tear down container afterwards
-      - name: tear down container
-        run: docker compose down   
+      - name: set up python
+        uses: actions/setup-python@v5
+        with: 
+            python-version: '3.14'
+            cache: 'pip'
+          
+        # then install PIP and dependencies
+      - name: install dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+        
+        # install project as a package
+      - name: install project
+        run: pip install -e .
+
+        # run the integration tests
+        run: python -m pytest tests/ -m integration
+
+  # # Then test full integration and that API works
+  # IntegrationTests:
+  #     # ensures that only starts after model artifacts saved
+  #     needs: UnitTests
+  # # test on linux only for now
+  #     runs-on: ubuntu-latest
+
+  #     steps:
+  # # first clone the repo into the runner's VM
+  #     - uses: actions/checkout@v5
+
+  #    # load in saved model artifacts
+  #     - name: download model artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: trained-models
+  #         path: models/
+
+  # # set up the container
+  #     - name: start container
+  #       run: docker compose up -d
+  # # Check server is ready, once the case then move on
+  #     - name: wait for server to be ready
+  #       run: |
+  #         for i in {1..10}; do
+  #           curl http://127.0.0.1:8000/health && break || echo "attempt $i failed, retrying"
+  #           sleep 6
+  #         done
+
+  #         echo 'check running containers'
+  #           docker ps -a
+  #         echo ' check docker logs'
+  #           docker logs credit_risk_container
+  
+  #     # now run test file using pytest
+  #     - name: run tests using pytest
+  #       run: docker exec -i credit_risk_container python -m pytest tests/ -m integration
+  # # tear down container afterwards
+  #     - name: tear down container
+  #       run: docker compose down   
