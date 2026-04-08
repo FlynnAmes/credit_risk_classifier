@@ -37,8 +37,14 @@ def ingest_and_clean_data(config_path):
 
     # if data no exist, then load it from Kaggle
     if not os.path.exists(DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv'):
-        load_data_from_kaggle()
-        print('\n Data loaded from Kaggle')
+
+        # in case data has been downloaded manually, rename
+        if os.path.exists(DATA_PATH / 'raw' / 'Credit Risk Benchmark Dataset.csv'):
+            os.rename(DATA_PATH / 'raw' / 'Credit Risk Benchmark Dataset.csv', DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv')
+            print('\n data file renamed')
+        else:
+            load_data_from_kaggle()
+            print('\n Data loaded from Kaggle')
 
     # load in data
     df = pd.read_csv(DATA_PATH / 'raw' / 'credit_risk_benchmark_dataset.csv')
