@@ -3,28 +3,39 @@
 ![CI](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/run_tests.yml/badge.svg?event=push)
 
 
-
 This project implements an end-to-end machine learning system for predicting
-loan default risk. 
-The system includes:
+loan default risk in real time.
 
+The system is deployed on AWS, structured as:
+
+```
+Client request ⇔ Amazon API Gateway ⇔ AWS Lambda ⇐ Amazon S3 (model)
+                              ⇓            ⇓
+                          Amazon CloudWatch (logs)
+```
+
+
+and includes:
+
+
+- A containersied API (FastAPI), stored in ECR; deployed to AWS Lambda and exposed via API Gateway
+- Inference Logging (CloudWatch)
 - Data preprocessing pipelines (Pandas + NumPy + scikit-learn + XGBoost)
-- Model training and hyperparameter tuning (RandomSearchCV)
-- Model validation and decision threshold optimisation
-- Model storage in AWS S3 (and locally)
-- A production inference API (FastAPI), containerised and pushed to AWS ECR
-- Deployed via AWS Lambda and API Gateway (also runnable locally)
-- Inference Logging to AWS Cloudwatch
+- Model training, hyperparameter tuning (RandomSearchCV), validation, and decision threshold optimisation.
 - Automated testing and CI (Pytest + GitHub Actions)
 
+<br>
 
 The API returns:
+
 - predicted default class
 - probability of default
-- decision threshold used for classification
+- decision threshold used for classification 
+
+<br>
 
 
-The system simulates a real-time credit decision making for fintech loan applications. Note the system is designed within AWS free-tier constraints.
+The system is designed to operate within AWS free-tier constraints. Note it can also be run locally (see later section).
 
 
 ## Repository Structure
@@ -64,17 +75,14 @@ The system simulates a real-time credit decision making for fintech loan applica
 Models (excluding one demo artifact), processed data, and logs are excluded from version control. <br>
 All artifacts can be regenerated using the training pipeline.
 
-## Data
 
-The model is trained on a credit risk dataset linked <a href=https://www.kaggle.com/datasets/adilshamim8/credit-risk-benchmark-dataset> here</a>. 
+## Engineering decisions
 
-
-Note the dataset has an artificial class balance of 50% defaulting. This is >10 times larger than the proportion of defaults typically observed in a credit risk population.
-Therefore, probabilities of default, obtained during inference, should not be interpreted as real world default probabilities (expected to be much lower using real world data). <br>
-While a correction to outputted probabilities can be made to account for sample vs population class balance discrepancies, robust calibration of these probabilities would require a large dataset (because the limited prevalence of positive classifications would result in very large confidence intervals at larger probabilities).
-
-The brier scores and reliability diagrams are therefore computed assuming that the population encountered during 
-inference has the same class balance as that used in training.
+- Used AWS Lambda over EC2 to remain within free-tier constraints (while maintaining a live API)
+- Used environment variables to permit both local and cloud deployment of the app
+- Cached model in /tmp during lambda invocation, to minimise latency from cold starts
+- Applied API rate and burst limiting to prevent abuse
+- Containerised app and pushed to ECR to ensure reproducibility
 
 
 ## Model
@@ -86,18 +94,45 @@ inference has the same class balance as that used in training.
 **Inference latency:** < 1 second per prediction (locally + after cold start on AWS)
 
 
-## Quickstart (getting a response)
+## Data
 
-The API is live on AWS lambda (with rate and burst limited to keep costs within free-tier limits)
+The model is trained on a credit risk dataset linked <a href=https://www.kaggle.com/datasets/adilshamim8/credit-risk-benchmark-dataset> here</a>. 
 
-To obtain a prediction from the model, all that is required is a POST HTTP request with feature data attached, e.g., using the requests package in python:
+
+Note the dataset has an artificial class balance of 50% defaulting. This is >10 times larger than the proportion of defaults typically observed in a credit risk population.
+Therefore, probabilities of default, obtained during inference, should not be interpreted as real world default probabilities (expected to be much lower using real world data). <br>
+
+
+## Quickstart (getting a prediction)
+
+The API is live on AWS Lambda and a prediction can be obtained via a POST HTTP request (i.e., one command, no setup), by running the following in a linux terminal
 
 ``` 
-import requests
-response = requests.post('https://tq1fek3ld3.execute-api.eu-west-2.amazonaws.com/predict', json=feature_dict)
+curl -X POST https://tq1fek3ld3.execute-api.eu-west-2.amazonaws.com/predict \
+-H "Content-Type: application/json"
+-d @features.json
 ```
 
-where <i>feature_dict</i> contains 10 input features validated using Pydantic schemas (see src/schemas.py), An example feature json is provided in aws_configs/test_post_body. <br>
+where <i>features.json</i> is a file specifying 10 input features (validated by the API using Pydantic schemas - see src/schemas.py).
+
+A correctly formatted example is pasted below, also provided in aws_configs/example_features.json: 
+
+```
+{
+ "rev_util": 0.2, 
+ "age": 36, 
+ "late_30_59": 0, 
+ "debt_ratio": 0.2, 
+ "open_credit": 1, 
+ "late_90": 0, 
+ "dependents": 2, 
+ "real_estate": 0, 
+ "late_60_89": 0, 
+ "monthly_inc": 2000.0
+}
+```
+
+<br>
 
 The response from the API will look something like:
 
@@ -110,9 +145,9 @@ The response from the API will look something like:
 }
 ```
 
-## Running locally
+## Running and training locally
 
-Git clone the repo onto your machine. Then in the repository directory, run the following commands in order to get the server running:
+Git clone the repo onto your machine. Then, run the following commands in the repo directory to get the server running:
 
 ```
 pip install -r requirements.txt
@@ -120,9 +155,9 @@ pip install -e .
 uvicorn credit_risk_classifier.app:app
 ```
 
-POST requests can be sent as outlined above (changing the URL to match that of your local server instance).
+POST requests can be sent as outlined above (changing the URL to match your local server instance).
 
-To run the training code, first download the data (from <a href=https://www.kaggle.com/datasets/adilshamim8/credit-risk-benchmark-dataset>here</a>, then placing in data/raw). Then, run the following commands in sequence:
+To run the training code, first download the data (from <a href=https://www.kaggle.com/datasets/adilshamim8/credit-risk-benchmark-dataset>here</a>, placing in data/raw). Then, run the following:
 
 ```
 python -m credit_risk_classifier.ingest_and_clean_data
@@ -136,9 +171,10 @@ and optionally (for detailed performance metrics):
 python -m credit_risk_classifier.validate
 ```
 
+When running locally, the probability threshold (lenient, standard, aggressive) used for classification  during production can be specified in config.yml. 
 
 ## Future extensions
 
+- Terraform for infrastructure reproducibility
+- MLflow for model versioning and experiment tracking 
 - Use inference logs for monitoring model performance and detecting data drift
-- Model versioning and experimeny tracking using MLflow
-- Simple pipeline orchestration using Prefect
