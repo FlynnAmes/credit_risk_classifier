@@ -203,11 +203,20 @@ def health():
     return {'status': 'OK'}
 
 
+# # ready enpoint to check that the server is running and ready to give output
+# @app.get('/ready')
+# def ready():
+#     # raise error if server is up but nodel not yet loaded
+#     if app.state.model is None:
+#         raise HTTPException(status_code=503, detail='model not yet loaded')
+#     else:
+#         return {'status': 'ready'}
+
 # ready enpoint to check that the server is running and ready to give output
 @app.get('/ready')
 def ready():
     # raise error if server is up but nodel not yet loaded
-    if app.state.model is None:
-        raise HTTPException(status=503, detail='model not yet loaded')
+    if model is None:
+        raise HTTPException(status_code=503, detail='model not yet loaded')
     else:
         return {'status': 'ready'}
