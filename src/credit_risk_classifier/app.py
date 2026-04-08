@@ -15,37 +15,41 @@ import boto3
 from io import BytesIO
 from mangum import Mangum
 
+#####################
+# Functions for setup
+#####################
 
-
-def setup_logger():
-    """ set up loger for logging to cloudwatch """
+def setup_logger(env):
+    """ set up logger, either logging to cloudwatch if on AWS, to if local file where running locally """
 
     # set up default logger
     logger = logging.getLogger()
     logger.setLevel('INFO')
-    console_handler = logging.StreamHandler()
-    logger.addHandler(console_handler)
 
     # set formatter for logging
     formatter = logging.Formatter(fmt='{asctime} - {message}',
                         style='{',
                         datefmt='%Y%m%d %H%M')
-    
-    console_handler.setFormatter(formatter)
-    
-    return logger
 
-# create logger at module level
-logger = setup_logger()
-# define path of model in tmp
-MODEL_CACHE_PATH = '/tmp/production_model.pkl'
+    if env == 'aws':
+        # log to cloudwatch
+        console_handler = logging.StreamHandler()
+        logger.addHandler(console_handler)
+        console_handler.setFormatter(formatter)
+    else:
+        # otherwise log to file
+        logs_dir_path = LOGS_PATH / 'inference'
+        os.makedirs(logs_dir_path, exist_ok=True)
+        # create handler that logs to file
+        file_handler = logging.FileHandler(logs_dir_path / 'app.log', mode='a')
+        logger.addHandler(file_handler)
+        file_handler.setFormatter(formatter)
+
+    return logger
 
 
 def load_model_from_S3():
     """ loads model from S3 from AWS """
-    #TODO: make key on AWS so that other models could be used if stored there
-    #TODO: use joblib to save models instead?
-    #TODO proper exceptions to catach where goes wrong
 
     # get the model object using an s3 client
     model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier', Key='standard.pkl')
@@ -63,34 +67,144 @@ def save_model_to_cache(model_object):
         pkl.dump(model_object, f)
 
 
-def load_production_model():
+def load_production_model(env):
     """ load production model, either from S3 (cold start) and caching in tmp. 
         If model already cached, then load from the cache (warm start) """
 
-    # if model is not cached, then load and cache it
-    if not os.path.exists(MODEL_CACHE_PATH):
-        # load model
-        model = load_model_from_S3()
-        logger.info('model loaded from S3')
-        # and cache it for future use
-        try:
-            save_model_to_cache(model)
-            logger.info('model saved to cache')
-        except Exception as e:
-            logger.warning(f'save to cache failed with exception {e}')
-
-    else:
-        # otherwise, try loading from cache
-        try:
-            with open(MODEL_CACHE_PATH, 'rb') as f:
-                model = pkl.load(f)
-
-        except Exception as e:
-            logger.warning(f'model load from cache failed with exception {e}. Loading from S3 instead')
+    # load from S3 or ephemeral storage if on aws
+    if env == 'aws':
+        # if model is not cached, then load and cache it
+        if not os.path.exists(MODEL_CACHE_PATH):
+            # load model
             model = load_model_from_S3()
-    
-    return model
+            logger.info('model loaded from S3')
+            # and cache it for future use
+            try:
+                save_model_to_cache(model)
+                logger.info('model saved to cache')
+            except Exception as e:
+                logger.warning(f'save to cache failed with exception {e}')
+
+        else:
+            # otherwise, try loading from cache
+            try:
+                with open(MODEL_CACHE_PATH, 'rb') as f:
+                    model = pkl.load(f)
+
+            except Exception as e:
+                logger.warning(f'model load from cache failed with exception {e}. Loading from S3 instead')
+                model = load_model_from_S3()
+    else:
+        # if not on aws, load model from local path
+        with open(model_local_path, 'rb') as f:
+            return pkl.load(f)
             
+    return model
+
+##############
+# global code
+##############
+
+# get environment
+env = os.getenv("ENV", "local")
+if env not in set(('aws', 'local')):
+    raise ValueError(f'environment variable env is currently {env}, should either be aws or local')
+
+#############
+# set constants
+#############
+
+# if environment is aws, set appropriate variables (option of varying model type not yet supported for this)
+if env == 'aws':
+    # name of S3 bucket to extract from
+    BUCKET_NAME = 'credit-risk-classifier'
+    # key name is the model name, choosing given business choice of threshold
+    KEY_NAME = 'standard.pkl'
+    # path to save model to in cache
+    MODEL_CACHE_PATH = '/tmp/model.pkl'
+else:
+
+    # for local, extract stakeholder specified probabilty threshold (lenient, standard or aggressive)
+    with open(CONFIG_PATH, 'r') as f:
+        threshold_type = yaml.safe_load(f)['production_threshold_type']
+    
+    # set model path to local dir (where saved). Note that to obtain non-demo versions of model
+    # need to run the training code
+    model_local_path = MODELS_PATH / 'tuned' / 'xgb' / (threshold_type + '.pkl')
+
+    # check that the model exists
+    if not os.path.exists(model_local_path):
+        raise RuntimeError(
+            f"model {'xgb/' + threshold_type + '.pkl' } not found. Either run training scripts or use provided pretrained model xgb/standard.pkl "
+        )
+
+###############
+# set up logger and load in model
+###############
+
+logger = setup_logger(env)
+
+model = load_production_model(env)
+logger.info('model loading completed')
+
+#############
+# set up app and handler if using
+############
+
+# note setting up without lifespan, for simpler lambda integration
+app = FastAPI()
+
+# if running through lambda, set mangum handler to enable running in AWS environment
+if env == 'aws':
+    handler = Mangum(app, lifespan='off')
+
+#################
+# HTTP endpoints
+#################
+
+# function to process POST request to 
+@app.post('/predict')
+def return_prediction(data: features):
+    try:
+        # run ML model
+        decision, probability_default, decision_threshold = return_inference(data, model)
+    except Exception as e:
+        # if inference fails for whatever reason, log it
+        logger.error(f'inference failed; error: {str(e)}')
+        # and return a more helpful error message
+        raise HTTPException(status_code=500, detail='inference failed')
+
+    # collate output to log
+    output_to_log = json.dumps({
+        'input': data.model_dump(),
+        'decision': decision,
+        'prob of default': probability_default,
+        'decision_threshold': decision_threshold})
+
+    # and log for the inference
+    logger.info(f'prediction_made; info: {output_to_log}')
+
+    # return inference, using pydantic output schema
+    return prediction(**{'decision': decision, 
+                       'probability_default': probability_default,
+                       'decision_threshold': decision_threshold})
+
+
+# health endpoint to check that the API is running
+@app.get('/health')
+def health():
+    return {'status': 'OK'}
+
+
+# ready enpoint to check that the server is running and ready to give output
+@app.get('/ready')
+def ready():
+    # raise error if server is up but nodel not yet loaded
+    if model is None:
+        raise HTTPException(status_code=503, detail='model not yet loaded')
+    else:
+        return {'status': 'ready'}
+
 
 # def load_production_model():
 #     """ function to load model during app startup, given config params specifying 
@@ -160,47 +274,6 @@ def load_production_model():
 # # set up instance of API class
 # app = FastAPI(lifespan=lifespan)
 
-# load in model at module level
-model = load_production_model()
-logger.info('model loading completed')
-
-# set up app without lifespan, for lambda integration
-app = FastAPI()
-
-# set mangum handler to enable running in AWS environment
-handler = Mangum(app, lifespan='off')
-
-# print type of model
-logger.info(f'model type: {type(model)}')
-
-# function to process POST request to 
-@app.post('/predict')
-def return_prediction(data: features):
-    try:
-        # run ML model
-        decision, probability_default, decision_threshold = return_inference(data, model)
-    except Exception as e:
-        # if inference fails for whatever reason, log it
-        logger.error(f'inference failed; error: {str(e)}')
-        # and return a more helpful error message
-        raise HTTPException(status_code=500, detail='inference failed')
-
-    # collate output to log
-    output_to_log = json.dumps({
-        'input': data.model_dump(),
-        'decision': decision,
-        'prob of default': probability_default,
-        'decision_threshold': decision_threshold})
-
-    # and log for the inference
-    logger.info(f'prediction_made; info: {output_to_log}')
-
-    # return inference, using pydantic output schema
-    return prediction(**{'decision': decision, 
-                       'probability_default': probability_default,
-                       'decision_threshold': decision_threshold})
-
-
 # # set up function to process POST request to 
 # @app.post('/predict')
 # def return_prediction(data: features):
@@ -229,12 +302,6 @@ def return_prediction(data: features):
 #                        'decision_threshold': decision_threshold})
 
 
-# health endpoint to check that the API is running
-@app.get('/health')
-def health():
-    return {'status': 'OK'}
-
-
 # # ready enpoint to check that the server is running and ready to give output
 # @app.get('/ready')
 # def ready():
@@ -243,12 +310,3 @@ def health():
 #         raise HTTPException(status_code=503, detail='model not yet loaded')
 #     else:
 #         return {'status': 'ready'}
-
-# ready enpoint to check that the server is running and ready to give output
-@app.get('/ready')
-def ready():
-    # raise error if server is up but nodel not yet loaded
-    if model is None:
-        raise HTTPException(status_code=503, detail='model not yet loaded')
-    else:
-        return {'status': 'ready'}

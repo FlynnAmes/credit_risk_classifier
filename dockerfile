@@ -19,9 +19,6 @@ COPY . .
 # create package out of the project
 RUN pip install -e .
 
-# set python path explictly to the workdir
-ENV PYTHONPATH=/app
-
 # start the application inside the container tell uvicorn to map port 8000 in container
 # to port 8000 on host
 # CMD ["uvicorn", "credit_risk_classifier.app:app", "--host", "0.0.0.0", "--port", "8000"]
