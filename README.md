@@ -18,8 +18,8 @@ Client request ⇔ Amazon API Gateway ⇔ AWS Lambda ⇐ Amazon S3 (model)
 and includes:
 
 
-- A containersied API (FastAPI), stored in ECR; deployed to AWS Lambda and exposed via API Gateway
-- Inference Logging (CloudWatch)
+- Containerised API (FastAPI), stored in ECR and deployed to AWS Lambda via API Gateway
+- Inference logging (CloudWatch)
 - Data preprocessing pipelines (Pandas + NumPy + scikit-learn + XGBoost)
 - Model training, hyperparameter tuning (RandomSearchCV), validation, and decision threshold optimisation.
 - Automated testing and CI (Pytest + GitHub Actions)
@@ -80,18 +80,18 @@ All artifacts can be regenerated using the training pipeline.
 
 - Used AWS Lambda over EC2 to remain within free-tier constraints (while maintaining a live API)
 - Used environment variables to permit both local and cloud deployment of the app
-- Cached model in /tmp during lambda invocation, to minimise latency from cold starts
+- Cached model in /tmp during lambda invocation, to avoud repeated S3 downloads and minimise latency
 - Applied API rate and burst limiting to prevent abuse
 - Containerised app and pushed to ECR to ensure reproducibility
 
 
 ## Model
 
-**Models evaluated:** Logistic Regression and XGBoost  
-**Model selection:** RandomSearchCV using average precision  
-**Threshold optimisation:** F-beta score with recall weighted higher than precision  
-**Final model:** XGBoost classifier (configurable variants)  
-**Inference latency:** < 1 second per prediction (locally + after cold start on AWS)
+- **Models evaluated:** Logistic Regression and XGBoost  
+- **Model selection:** RandomSearchCV using average precision  
+- **Threshold optimisation:** F-beta score with recall weighted higher than precision  
+- **Final model:** XGBoost classifier (configurable variants)  
+- **Inference latency:** < 1 second (locally and after cold start on AWS)
 
 
 ## Data
@@ -109,7 +109,7 @@ The API is live on AWS Lambda and a prediction can be obtained via a POST HTTP r
 
 ``` 
 curl -X POST https://tq1fek3ld3.execute-api.eu-west-2.amazonaws.com/predict \
--H "Content-Type: application/json"
+-H "Content-Type: application/json" \
 -d @features.json
 ```
 
@@ -171,7 +171,7 @@ and optionally (for detailed performance metrics):
 python -m credit_risk_classifier.validate
 ```
 
-When running locally, the probability threshold (lenient, standard, aggressive) used for classification  during production can be specified in config.yml. 
+When running locally, the probability threshold (lenient, standard, aggressive) used for classification  during production can be specified in config.yml. Note that by default, the app loads the model from disk locally; in AWS, it loads from Amazon S3 via an environment configuration.
 
 ## Future extensions
 
