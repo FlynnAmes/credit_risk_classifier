@@ -6,24 +6,27 @@
 This project implements an end-to-end machine learning system for predicting
 loan default risk in real time.
 
-The system is deployed on AWS, configured via terraform (Iac), structured as:
+The system is deployed on AWS, with infrastructure defined via Terraform (IaC), structured as:
 
 ```
+                          Amazon ECR (docker image)
+                                           ⇓
 Client request ⇔ Amazon API Gateway ⇔ AWS Lambda ⇐ Amazon S3 (model)
                               ⇓            ⇓
                           Amazon CloudWatch (logs)
 ```
 
 
-and includes:
+and including:
 
 
-- Containerised API (FastAPI), stored in ECR and deployed to AWS Lambda via API Gateway
-- Managed infrastructure with Iac (terraform)
+- A containerised API (FastAPI; image stored in ECR) deployed to AWS Lambda via API Gateway
+- Infrastructure defined using Terraform (IaC) with remote state storage (S3 + locking)
 - Inference logging (CloudWatch)
-- Data preprocessing pipelines (Pandas + NumPy + scikit-learn + XGBoost)
-- Model training, hyperparameter tuning (RandomSearchCV), validation, and decision threshold optimisation.
-- Automated testing and CI (Pytest + GitHub Actions)
+- Automated testing via Pytest with CI pipeline (GitHub Actions)
+- Infrastructure deployment currently managed separately via Terraform CLI (CI/CD extension planned)
+- Data preprocessing and validation pipelines (Pandas + NumPy + scikit-learn + XGBoost) separated from inference code.
+
 
 <br>
 
@@ -48,7 +51,7 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 │  
 ├── examples/                      # example json payload file for POST request
 │ 
-├── infra/                         # terraform files for managing aws infrastructure
+├── infra/                         # Terraform files for managing aws infrastructure
 │ 
 ├── logs/                          # training, validation, and inference logs (gitignored)
 ├── models/                        # trained model artifacts (gitignored except one demo artifact)
@@ -82,13 +85,14 @@ All artifacts can be regenerated using the training pipeline.
 
 ## Engineering decisions
 
-- Used AWS Lambda over EC2 to remain within free-tier constraints (while maintaining a live API)
-- Managed AWS with terraform to ensure reproducibility. State file stored remotely with locking to avoid 
-possible configuration drift 
-- Used environment variables to permit both local and cloud deployment of the app
-- Cached model in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise latency
+
+- Defined complete AWS infrastructure using Terraform (Lambda, API Gateway, S3, ECR, IAM), enabling reproducible, version-controlled deployments
+- Configured remote state (S3 + locking) to prevent state-configuration drift
+- Chose AWS Lambda over EC2 to minimise operational overhead and cost (to maintain live API within free-tier constraints), accepting cold start latency as a trade-off
+- Ensured environment agnostic design (via environment variables), permitting both local and cloud deployment
+- Implemented model caching in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise cold-start latency 
 - Applied API rate and burst limiting to prevent abuse
-- Containerised app and pushed to ECR to ensure reproducibility
+- Designed system to separate training and inference concerns, with model artifacts stored in S3 and loaded dynamically at runtime
 
 
 ## Model
@@ -97,7 +101,7 @@ possible configuration drift
 - **Model selection:** RandomSearchCV using average precision  
 - **Threshold optimisation:** F-beta score with recall weighted higher than precision  
 - **Final model:** XGBoost classifier (configurable variants)  
-- **Inference latency:** < 1 second (locally and after cold start on AWS)
+- **Inference latency:** < 1s locally and low latency after warm-start Lambda invocation
 
 
 ## Data
@@ -181,5 +185,7 @@ When running locally, the probability threshold (lenient, standard, aggressive) 
 
 ## Future extensions
 
-- MLflow for model versioning and experiment tracking 
-- Use inference logs for monitoring model performance and detecting data drift
+- CI/CD for infrastructure deployment (Terraform plan/apply)
+- Model monitoring using inference logs (data drift)
+- Experiment tracking and model versioning (MLflow)
+
