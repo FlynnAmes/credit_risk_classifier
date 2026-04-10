@@ -6,7 +6,7 @@
 This project implements an end-to-end machine learning system for predicting
 loan default risk in real time.
 
-The system is deployed on AWS, structured as:
+The system is deployed on AWS, configured via terraform (Iac), structured as:
 
 ```
 Client request ⇔ Amazon API Gateway ⇔ AWS Lambda ⇐ Amazon S3 (model)
@@ -19,6 +19,7 @@ and includes:
 
 
 - Containerised API (FastAPI), stored in ECR and deployed to AWS Lambda via API Gateway
+- Managed infrastructure with Iac (terraform)
 - Inference logging (CloudWatch)
 - Data preprocessing pipelines (Pandas + NumPy + scikit-learn + XGBoost)
 - Model training, hyperparameter tuning (RandomSearchCV), validation, and decision threshold optimisation.
@@ -45,7 +46,10 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 │   ├── processed/
 │   └── raw/   
 │  
-├── aws_configs/                   # trust policy json for IAM role assignment
+├── examples/                      # example json payload file for POST request
+│ 
+├── infra/                         # terraform files for managing aws infrastructure
+│ 
 ├── logs/                          # training, validation, and inference logs (gitignored)
 ├── models/                        # trained model artifacts (gitignored except one demo artifact)
 ├── notebooks/                     # exploratory analysis
@@ -79,8 +83,10 @@ All artifacts can be regenerated using the training pipeline.
 ## Engineering decisions
 
 - Used AWS Lambda over EC2 to remain within free-tier constraints (while maintaining a live API)
+- Managed AWS with terraform to ensure reproducibility. State file stored remotely with locking to avoid 
+possible configuration drift 
 - Used environment variables to permit both local and cloud deployment of the app
-- Cached model in /tmp during lambda invocation, to avoud repeated S3 downloads and minimise latency
+- Cached model in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise latency
 - Applied API rate and burst limiting to prevent abuse
 - Containerised app and pushed to ECR to ensure reproducibility
 
@@ -175,6 +181,5 @@ When running locally, the probability threshold (lenient, standard, aggressive) 
 
 ## Future extensions
 
-- Terraform for infrastructure reproducibility
 - MLflow for model versioning and experiment tracking 
 - Use inference logs for monitoring model performance and detecting data drift
