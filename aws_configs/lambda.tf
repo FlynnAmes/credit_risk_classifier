@@ -38,7 +38,7 @@ resource "aws_lambda_function" "lambda" {
   image_uri = "772928963391.dkr.ecr.eu-west-2.amazonaws.com/credit-risk-classifier-tf:latest"
   # give 1Gb of memory
   memory_size = 1024
-  timeout     = 10
+  timeout     = 20
   
   # set environment variable so knows to load from S3
   environment {
