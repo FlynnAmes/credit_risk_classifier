@@ -39,5 +39,12 @@ resource "aws_lambda_function" "lambda" {
   # give 1Gb of memory
   memory_size = 1024
   timeout     = 10
+  
+  # set environment variable so knows to load from S3
+  environment {
+    variables = {
+        ENV = "aws"
+    }
+  }
 
 }
