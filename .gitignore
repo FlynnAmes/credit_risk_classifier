@@ -17,3 +17,8 @@ plots/
 # other temporary data
 __pycache__/
 *.egg-info
+
+# terraform files
+.terraform/
+# state stored locally but ignore just in case
+terraform.tfstate

@@ -1,0 +1,27 @@
+terraform {
+
+  # keep terraform version flexible for now
+  required_version = "~> 1.0"
+
+  required_providers {
+
+    aws = {
+
+      source = "hashicorp/aws"
+      # latest version at time of writing is 6.40
+      version = "~> 6.40"
+    }
+  }
+
+  # set place where going store the state file
+  backend "s3" {
+    # use manually set up bucket for now
+    bucket = "terraform-state-772928963391"
+    key    = "terraform.tfstate"
+    region = "eu-west-2"
+
+    # lock file for locking the terraform state
+    use_lockfile = true
+  }
+
+}
