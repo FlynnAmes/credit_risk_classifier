@@ -125,7 +125,7 @@ curl -X POST https://dcq552h5h8.execute-api.eu-west-2.amazonaws.com/predict \
 
 where <i>features.json</i> is a file specifying 10 input features (validated by the API using Pydantic schemas - see src/schemas.py).
 
-A correctly formatted example is pasted below, also provided in aws_configs/example_features.json: 
+A correctly formatted example is pasted below, also provided in examples/features.json: 
 
 ```
 {
