@@ -34,16 +34,20 @@ resource "aws_lambda_function" "lambda" {
   role          = aws_iam_role.lambda_role.arn
 
   package_type = "Image"
-  # hardcode the image uri and other params for now
-  image_uri = "772928963391.dkr.ecr.eu-west-2.amazonaws.com/credit-risk-classifier-tf:latest"
+  # Use SSM param to define image uri (so that can update in CI and terraform gets the changes)
+  image_uri = aws_ssm_parameter.image_uri.value
   # give 1Gb of memory
   memory_size = 1024
   timeout     = 20
-  
+
   # set environment variable so knows to load from S3
   environment {
     variables = {
-        ENV = "aws"
+      # so that knows whether to run in local or cloud mode
+      ENV = "aws"
+      # so that can load in model from S3 (rather than hardcoding path)
+      model_bucket_name = aws_ssm_parameter.model_bucket_name.value
+      model_key_name    = aws_ssm_parameter.model_key_name.value
     }
   }
 
