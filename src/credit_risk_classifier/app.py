@@ -51,7 +51,7 @@ def load_model_from_S3():
     """ loads model from S3 from AWS """
 
     # get the model object using an s3 client
-    model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier', Key='standard.pkl')
+    model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier-tf', Key='standard.pkl')
     # then get the model by passing through BytesIO, and loading via pickle
     body = model_obj['Body'].read()
     model = pkl.load(BytesIO(body))
@@ -104,7 +104,7 @@ def load_production_model(env):
 # global code
 ##############
 
-# get environment
+# env variable that specifies whether local or on the cloud
 env = os.getenv("ENV", "local")
 if env not in set(('aws', 'local')):
     raise ValueError(f'environment variable env is currently {env}, should either be aws or local')
@@ -115,10 +115,21 @@ if env not in set(('aws', 'local')):
 
 # if environment is aws, set appropriate variables (option of varying model type not yet supported for this)
 if env == 'aws':
-    # name of S3 bucket to extract from
-    BUCKET_NAME = 'credit-risk-classifier'
-    # key name is the model name, choosing given business choice of threshold
-    KEY_NAME = 'standard.pkl'
+
+    # name of S3 bucket to extract from and model artifact within
+    # these are stored in SSM. In aws, they are set as environment variables
+    BUCKET_NAME = os.getenv('model_bucket_name')
+    KEY_NAME = os.getenv('model_key_name')
+
+    # raise error if not defined
+    if BUCKET_NAME is None or KEY_NAME is None:
+        raise TypeError('bucket name and key name environment variables should both be defined.' \
+        f'yet have type {type(BUCKET_NAME) and type(KEY_NAME)} respectively')
+   
+
+    # BUCKET_NAME = 'credit-risk-classifier'
+    # # key name is the model name, choosing given business choice of threshold
+    # KEY_NAME = 'standard.pkl'
     # path to save model to in cache
     MODEL_CACHE_PATH = '/tmp/model.pkl'
 else:
