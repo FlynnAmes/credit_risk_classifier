@@ -40,3 +40,29 @@ resource "aws_ssm_parameter" "model_key_name" {
     ]
   }
 }
+
+# name of the ecr repository
+resource "aws_ssm_parameter" "ecr_repo_url" {
+  name  = "ecr_repo_uri"
+  type  = "String"
+  value = aws_ecr_repository.ecr_repo.repository_url
+
+  lifecycle {
+    ignore_changes = [
+      value,
+    ]
+  }
+}
+
+# name of the lambda function
+resource "aws_ssm_parameter" "lambda_function_name" {
+  name  = "lambda_function_name"
+  type  = "String"
+  value = aws_lambda_function.lambda.function_name
+
+  lifecycle {
+    ignore_changes = [
+      value,
+    ]
+  }
+}

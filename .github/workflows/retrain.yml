@@ -35,11 +35,11 @@ jobs:
           # compare file of current vs the previous commit (count num of files changed)
           # for now manual specify which files affect app and which training
         run: |
-          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '^src/credit_risk_classifier/t.*\.py|.*config.yml') >> $GITHUB_OUTPUT
+          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '^src/credit_risk_classifier/t.*\.py|.*config.yml' || echo '0') >> $GITHUB_OUTPUT
 
       - id: app_files_check
         run: |
-          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py') >> $GITHUB_OUTPUT
+          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
 
   
   # retrain model when changes made to the training and tuning code
@@ -51,7 +51,8 @@ jobs:
     needs: get_changed_files
 
     # if training files have been changed, then run the steps below
-    if: needs.get_changed_files.outputs.training_changed > 1
+    if: needs.get_changed_files.outputs.training_changed > 0
+
     steps:
       # clone repo
       - uses: actions/checkout@v5
@@ -63,12 +64,12 @@ jobs:
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      # and AWS keys (for saving to s3 and pushing to ECR)
+      # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo '{"aws_access_key": "${{ secrets.AWS_ACCESS_KEY }}", "aws_secret_access_key": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"}' > ~/.aws/credentials.json
-          chmod 600 ~/.aws/credentials.json
+          echo "{[default]\naws_access_key = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          chmod 600 ~/.aws/credentials
 
       # set up python with version 3.14
       - name: set up python
@@ -100,22 +101,65 @@ jobs:
       # get bucket and artifact name to save artifact to 
       # for now always using same model which defined as key_name (so no need to update the key name)
       - name: get SSM params
+        id: get_SSM_params
+        
+      # append to GITHUB env so persists across steps
         run: |
-          export MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameters.Value') | tr -d '"')
-          export MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameters.Value') | tr -d '"')
+          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
 
-      # and push model artifact to S3
+      # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
         run: |
-          aws s3 cp "~/models/tuned/xgb/${MODEL_KEY_NAME}" "s3://{MODEL_BUCKET_NAME}""
-
+          aws s3 cp "~/models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
+        
   ###########################################
 
   # job that pushes new image when changes made to the app
   push_docker_image:
     runs-on: 'ubuntu-latest'
 
+    # must wait for job that figures out which files have been changed
+    needs: get_changed_files
 
+    if: needs.get_changed_files.outputs.app_changed > 0
+
+    steps:
+
+    # clone repo
+      - uses: actions/checkout@v5
+    
+    # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
+      - name: set up AWS keys
+        run: |
+          mkdir -p ~/.aws
+          echo "{[default]\naws_access_key = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          chmod 600 ~/.aws/credentials
+    
+    # get the ECR repo url and lambda function name from AWS SSM
+      - name: get ecr url and lambda function name
+        run: |
+          echo "ECR_REPO_URL=$(aws ssm get-parameter --name ecr_repo_url --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+    
+    # build the docker image and push to ECR
+      - name: build the docker image and push to ECR
+      # need to authenticate first before pushing. Using git commit hash for the image tag
+        run: |
+          aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
+          docker buildx build --provenanace=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }}
+    
+    # now that pushed to ECR, update AWS SSM parameter with the new image URL
+      - name: update SSM image uri
+        run: |
+          aws ssm put-parameter --name image_uri --overwrite --value $ECR_REPO_URL:${{ github.sha }}
+    
+    # update lambda function via aws CLI (not using Terraform here. When next apply, lambda is configured so 
+    # that will be set to the SSM image URI anyway)
+      - name: update lambda function
+        run: |
+          aws lambda update-function-code --function-name $LAMBDA_FUNC_NAME --image-uri $ECR_REPO_URL:${{ github.sha }}
+    
 
 ####################################
   # unit and integration tests
@@ -166,7 +210,6 @@ jobs:
       - name: run integration tests
         run: |
           python -m pytest tests/ -m integration
-
 
 
       
