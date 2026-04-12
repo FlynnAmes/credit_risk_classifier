@@ -172,6 +172,11 @@ jobs:
         run: |
           echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
           echo "the API URL variable is $API_URL"
+      
+      # get lambda function name if not already specified
+      - name: get lambda function name
+        run: |
+          if [ -z "$LAMBDA_FUNC_NAME" ]; then echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV fi
 
       # set up python with version 3.14
       - name: set up python
@@ -199,7 +204,7 @@ jobs:
       # and the integration tests (first wait until the function has updated)
       - name: run integration tests
         run: |
-          aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
+          aws lambda wait function-updated --function-name
           python -m pytest tests/ -m integration
 
 
