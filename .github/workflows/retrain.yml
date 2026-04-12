@@ -142,8 +142,8 @@ jobs:
           --cache-from type=gha \
           --cache-to type=gha,mode=max \
           --provenance=False --platform=linux/amd64 \
-          $ECR_REPO_URL:${{ github.sha }} \
-           --push .
+          -t $ECR_REPO_URL:${{ github.sha }} \
+          --push .
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
