@@ -176,7 +176,7 @@ jobs:
       # get lambda function name if not already specified
       - name: get lambda function name
         run: |
-          if [ -z "$LAMBDA_FUNC_NAME" ]; then echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV fi
+          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
 
       # set up python with version 3.14
       - name: set up python
@@ -206,8 +206,6 @@ jobs:
         run: |
           aws lambda wait function-updated --function-name
           python -m pytest tests/ -m integration
-
-
       
 
       
