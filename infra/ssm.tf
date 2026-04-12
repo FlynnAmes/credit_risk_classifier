@@ -15,19 +15,6 @@ resource "aws_ssm_parameter" "image_uri" {
   }
 }
 
-# name of bucket containing model artifact
-resource "aws_ssm_parameter" "model_bucket_name" {
-  name  = "model_bucket_name"
-  type  = "String"
-  value = aws_s3_bucket.s3.bucket
-
-  lifecycle {
-    ignore_changes = [
-      value,
-    ]
-  }
-}
-
 # name of model artifact 'file'
 resource "aws_ssm_parameter" "model_key_name" {
   name  = "model_key_name"
@@ -41,17 +28,21 @@ resource "aws_ssm_parameter" "model_key_name" {
   }
 }
 
+# all ssm parameter below here shouldn't be changed via CLI
+
+# name of bucket containing model artifact
+resource "aws_ssm_parameter" "model_bucket_name" {
+  name  = "model_bucket_name"
+  type  = "String"
+  value = aws_s3_bucket.s3.bucket
+
+}
+
 # name of the ecr repository
 resource "aws_ssm_parameter" "ecr_repo_url" {
   name  = "ecr_repo_uri"
   type  = "String"
   value = aws_ecr_repository.ecr_repo.repository_url
-
-  lifecycle {
-    ignore_changes = [
-      value,
-    ]
-  }
 }
 
 # name of the lambda function
@@ -59,10 +50,11 @@ resource "aws_ssm_parameter" "lambda_function_name" {
   name  = "lambda_function_name"
   type  = "String"
   value = aws_lambda_function.lambda.function_name
+}
 
-  lifecycle {
-    ignore_changes = [
-      value,
-    ]
-  }
+# name of the url for the API
+resource "aws_ssm_parameter" "api_url" {
+  name  = "api_url"
+  type  = "String"
+  value = aws_apigatewayv2_api.api.api_endpoint
 }
