@@ -172,6 +172,7 @@ jobs:
         run: |
           echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
           echo "the API URL variable is $API_URL"
+
       # set up python with version 3.14
       - name: set up python
         uses: actions/setup-python@v5
