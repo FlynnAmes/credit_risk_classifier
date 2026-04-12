@@ -9,7 +9,7 @@
 # triggers
 on:
   push:
-    branches: ['master']
+    branches: ['master', 'devel']
     # whenever change the config or src
     paths: ['src/**', 'config.*']
 
@@ -39,7 +39,7 @@ jobs:
 
       - id: app_files_check
         run: |
-          echo APP_CHANGED_COUNT$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
+          echo APP_CHANGED_COUNT=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
 
   
   # retrain model when changes made to the training and tuning code
@@ -68,7 +68,7 @@ jobs:
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
           chmod 600 ~/.aws/credentials
 
       # set up python with version 3.14
@@ -133,14 +133,14 @@ jobs:
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
           chmod 600 ~/.aws/credentials
     
     # get the ECR repo url and lambda function name from AWS SSM
       - name: get ecr url and lambda function name
         run: |
-          echo "ECR_REPO_URL=$(aws ssm get-parameter --name ecr_repo_url --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
-          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+          echo "ECR_REPO_URL=$(aws ssm get-parameter --name ecr_repo_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
     
     # build the docker image and push to ECR
       - name: build the docker image and push to ECR
@@ -180,13 +180,13 @@ jobs:
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
           chmod 600 ~/.aws/credentials
       
       # set env variable for the url of the api
       - name: get api url
         run: |
-          echo "$API_URL=(aws ssm get-parameter --name api_url --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+          echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
 
       # set up python with version 3.14
       - name: set up python
