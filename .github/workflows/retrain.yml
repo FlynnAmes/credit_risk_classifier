@@ -13,7 +13,12 @@ on:
     # whenever change the config or src
     paths: ['src/**', 'config.*']
 
-    
+# set default region across all jobs, aswell as credentials to allow CLI calls
+env: 
+  AWS_DEFAULT_REGION: eu-west-2 
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
 jobs:
 
   # get the files changed during commit as filter for which jobs run
@@ -64,12 +69,12 @@ jobs:
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
-      - name: set up AWS keys
-        run: |
-          mkdir -p ~/.aws
-          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-          chmod 600 ~/.aws/credentials
+      # # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
+      # - name: set up AWS keys
+      #   run: |
+      #     mkdir -p ~/.aws
+      #     echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+      #     chmod 600 ~/.aws/credentials
 
       # set up python with version 3.14
       - name: set up python
@@ -105,13 +110,13 @@ jobs:
         
       # append to GITHUB env so persists across steps
         run: |
-          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_KEY_NAME=$(aws ssm get-parameter  --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
           echo "the model bucket name is $MODEL_BUCKET_NAME and model key name $MODEL_KEY_NAME"
       # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
         run: |
-          aws s3 cp "~/models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
+          aws s3  cp "~/models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
         
   ###########################################
 
@@ -129,12 +134,12 @@ jobs:
     # clone repo
       - uses: actions/checkout@v5
     
-    # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
-      - name: set up AWS keys
-        run: |
-          mkdir -p ~/.aws
-          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-          chmod 600 ~/.aws/credentials
+    # # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
+    #   - name: set up AWS keys
+    #     run: |
+    #       mkdir -p ~/.aws
+    #       echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+    #       chmod 600 ~/.aws/credentials
     
     # get the ECR repo url and lambda function name from AWS SSM
       - name: get ecr url and lambda function name
@@ -147,12 +152,12 @@ jobs:
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
-          docker buildx build --provenance=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push
+          docker buildx build --provenance=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push .
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
         run: |
-          aws ssm put-parameter --name image_uri --overwrite --value $ECR_REPO_URL:${{ github.sha }}
+          aws ssm put-parameter  --name image_uri --overwrite --value $ECR_REPO_URL:${{ github.sha }}
     
     # update lambda function via aws CLI (not using Terraform here. When next apply, lambda is configured so 
     # that will be set to the SSM image URI anyway)
@@ -176,12 +181,12 @@ jobs:
       # clone repo
       - uses: actions/checkout@v5
 
-       # and AWS keys (for getting api url)
-      - name: set up AWS keys
-        run: |
-          mkdir -p ~/.aws
-          echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-          chmod 600 ~/.aws/credentials
+      #  # and AWS keys (for getting api url)
+      # - name: set up AWS keys
+      #   run: |
+      #     mkdir -p ~/.aws
+      #     echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+      #     chmod 600 ~/.aws/credentials
       
       # set env variable for the url of the api
       - name: get api url
