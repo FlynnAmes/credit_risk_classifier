@@ -167,13 +167,6 @@ jobs:
       # clone repo
       - uses: actions/checkout@v5
 
-      #  # and AWS keys (for getting api url)
-      # - name: set up AWS keys
-      #   run: |
-      #     mkdir -p ~/.aws
-      #     echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-      #     chmod 600 ~/.aws/credentials
-      
       # set env variable for the url of the api
       - name: get api url
         run: |
@@ -202,9 +195,10 @@ jobs:
         run: |
           python -m pytest tests/ -m unit
       
-      # and the integration tests
+      # and the integration tests (first wait until the function has updated)
       - name: run integration tests
         run: |
+          aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
           python -m pytest tests/ -m integration
 
 
