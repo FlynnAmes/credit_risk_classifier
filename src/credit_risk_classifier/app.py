@@ -213,4 +213,4 @@ def ready():
     if model is None:
         raise HTTPException(status_code=503, detail='model not yet loaded')
     else:
-        return {'status': 'ready'} 
+        return {'status': 'ready'}

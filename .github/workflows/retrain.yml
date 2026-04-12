@@ -107,7 +107,7 @@ jobs:
         run: |
           echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
           echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-
+          echo "the model bucket name is $MODEL_BUCKET_NAME and model key name $MODEL_KEY_NAME"
       # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
         run: |
@@ -147,7 +147,7 @@ jobs:
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
-          docker buildx build --provenanace=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push
+          docker buildx build --provenance=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
@@ -187,7 +187,7 @@ jobs:
       - name: get api url
         run: |
           echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-
+          echo "the API URL variable is $API_URL"
       # set up python with version 3.14
       - name: set up python
         uses: actions/setup-python@v5

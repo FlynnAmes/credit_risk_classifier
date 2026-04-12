@@ -181,4 +181,4 @@ def train_models(config_path):
 # if script run, then train the models!
 if __name__ == '__main__':
     # if file called, then use default configuration path
-    train_models(config_path=CONFIG_PATH) 
+    train_models(config_path=CONFIG_PATH)
