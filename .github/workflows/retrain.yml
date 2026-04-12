@@ -109,7 +109,6 @@ jobs:
       # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
         run: |
-          ls -R
           aws s3  cp "models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
         
   ###########################################
@@ -139,7 +138,7 @@ jobs:
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
-          docker buildx build --provenance=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push .
+          docker buildx build --provenance=False --platform=linux/amd64 -t $ECR_REPO_URL:${{ github.sha }} --push .
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
