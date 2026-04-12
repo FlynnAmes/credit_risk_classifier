@@ -125,11 +125,7 @@ if env == 'aws':
     if BUCKET_NAME is None or KEY_NAME is None:
         raise TypeError('bucket name and key name environment variables should both be defined.' \
         f'yet have type {type(BUCKET_NAME) and type(KEY_NAME)} respectively')
-   
-
-    # BUCKET_NAME = 'credit-risk-classifier'
-    # # key name is the model name, choosing given business choice of threshold
-    # KEY_NAME = 'standard.pkl'
+    
     # path to save model to in cache
     MODEL_CACHE_PATH = '/tmp/model.pkl'
 else:
@@ -213,4 +209,4 @@ def ready():
     if model is None:
         raise HTTPException(status_code=503, detail='model not yet loaded')
     else:
-        return {'status': 'ready'} 
+        return {'status': 'ready'}
