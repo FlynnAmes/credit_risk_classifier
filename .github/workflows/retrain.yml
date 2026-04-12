@@ -138,7 +138,12 @@ jobs:
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
-          docker buildx build --provenance=False --platform=linux/amd64 -t $ECR_REPO_URL:${{ github.sha }} --push .
+          docker buildx build \
+          --cache-from type=gha \
+          --cache-to type=gha,mode=max \ 
+          --provenance=False --platform=linux/amd64 \
+          $ECR_REPO_URL:${{ github.sha }} \
+           --push .
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
@@ -204,7 +209,7 @@ jobs:
       # and the integration tests (first wait until the function has updated)
       - name: run integration tests
         run: |
-          aws lambda wait function-updated --function-name
+          aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
           python -m pytest tests/ -m integration
       
 
