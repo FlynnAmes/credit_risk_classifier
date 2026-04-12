@@ -69,13 +69,6 @@ jobs:
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      # # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
-      # - name: set up AWS keys
-      #   run: |
-      #     mkdir -p ~/.aws
-      #     echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-      #     chmod 600 ~/.aws/credentials
-
       # set up python with version 3.14
       - name: set up python
         uses: actions/setup-python@v5
@@ -112,11 +105,12 @@ jobs:
         run: |
           echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
           echo "MODEL_KEY_NAME=$(aws ssm get-parameter  --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "the model bucket name is $MODEL_BUCKET_NAME and model key name $MODEL_KEY_NAME"
+          echo "the model bucket name is ${MODEL_BUCKET_NAME} and model key name ${MODEL_KEY_NAME}"
       # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
         run: |
-          aws s3  cp "~/models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
+          ls -R
+          aws s3  cp "models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
         
   ###########################################
 
@@ -133,13 +127,6 @@ jobs:
 
     # clone repo
       - uses: actions/checkout@v5
-    
-    # # and AWS keys (for saving to s3 and pushing to ECR) (same format as in repo)
-    #   - name: set up AWS keys
-    #     run: |
-    #       mkdir -p ~/.aws
-    #       echo -e "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
-    #       chmod 600 ~/.aws/credentials
     
     # get the ECR repo url and lambda function name from AWS SSM
       - name: get ecr url and lambda function name

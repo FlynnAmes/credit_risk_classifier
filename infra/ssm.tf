@@ -40,7 +40,7 @@ resource "aws_ssm_parameter" "model_bucket_name" {
 
 # name of the ecr repository
 resource "aws_ssm_parameter" "ecr_repo_url" {
-  name  = "ecr_repo_uri"
+  name  = "ecr_repo_url"
   type  = "String"
   value = aws_ecr_repository.ecr_repo.repository_url
 }
