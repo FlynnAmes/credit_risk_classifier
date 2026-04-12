@@ -20,10 +20,10 @@ jobs:
   get_changed_files:
 
     runs-on: 'ubuntu-latest'
-    # set outputs counter for files changed
+    # set outputs counter for files changed, from the $GITHUB_OUTPUT file
     outputs:
-      training_changed: ${{ steps.train_files_check.outputs.src_changed }}
-      app_changed: ${{ steps.app_files_check.outputs.src_changed }}
+      training_changed: ${{ steps.train_files_check.outputs.TRAINING_CHANGED_COUNT}}
+      app_changed: ${{ steps.app_files_check.outputs.APP_CHANGED_COUNT }}
 
     steps:
       - uses: actions/checkout@v5
@@ -35,11 +35,11 @@ jobs:
           # compare file of current vs the previous commit (count num of files changed)
           # for now manual specify which files affect app and which training
         run: |
-          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '^src/credit_risk_classifier/t.*\.py|.*config.yml' || echo '0') >> $GITHUB_OUTPUT
+          echo TRAINING_CHANGED_COUNT=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '^src/credit_risk_classifier/t.*\.py|.*config.yml' || echo '0') >> $GITHUB_OUTPUT
 
       - id: app_files_check
         run: |
-          echo $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
+          echo APP_CHANGED_COUNT$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
 
   
   # retrain model when changes made to the training and tuning code
@@ -68,7 +68,7 @@ jobs:
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo "{[default]\naws_access_key = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
           chmod 600 ~/.aws/credentials
 
       # set up python with version 3.14
@@ -105,8 +105,8 @@ jobs:
         
       # append to GITHUB env so persists across steps
         run: |
-          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
-          echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
 
       # push model artifact to S3 (using env variables defined above for the bucket name)
       - name: save model artifact to s3
@@ -133,7 +133,7 @@ jobs:
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo "{[default]\naws_access_key = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
           chmod 600 ~/.aws/credentials
     
     # get the ECR repo url and lambda function name from AWS SSM
@@ -147,7 +147,7 @@ jobs:
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
-          docker buildx build --provenanace=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }}
+          docker buildx build --provenanace=False --platform=linux.amd64 -t $ECR_REPO_URL:${{ github.sha }} --push
     
     # now that pushed to ECR, update AWS SSM parameter with the new image URL
       - name: update SSM image uri
@@ -165,7 +165,7 @@ jobs:
   # unit and integration tests
   tests:
 
-    # ensure always runs even if jobs are skipped
+    # ensure always runs even if jobs are skipped (or fail, so can get feedback)
     if: ${{ always() }}
     # must wait for building or retraining to finish
     needs: ['retrain_model', 'push_docker_image']
@@ -176,12 +176,17 @@ jobs:
       # clone repo
       - uses: actions/checkout@v5
 
-       # and AWS keys (for saving to s3 and pushing to ECR)
+       # and AWS keys (for getting api url)
       - name: set up AWS keys
         run: |
           mkdir -p ~/.aws
-          echo '{"aws_access_key": "${{ secrets.AWS_ACCESS_KEY }}", "aws_secret_access_key": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"}' > ~/.aws/credentials.json
-          chmod 600 ~/.aws/credentials.json
+          echo "[default]\naws_access_key_id = ${{ secrets.AWS_ACCESS_KEY }}\naws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" > ~/.aws/credentials
+          chmod 600 ~/.aws/credentials
+      
+      # set env variable for the url of the api
+      - name: get api url
+        run: |
+          echo "$API_URL=(aws ssm get-parameter --name api_url --query 'Parameter.Value' | tr -d '"')" >> $GITHUB_ENV
 
       # set up python with version 3.14
       - name: set up python
@@ -201,7 +206,7 @@ jobs:
       - name: install project
         run: pip install -e .
       
-      # perform unit tests TODO: get url from build section to use as environment variable
+      # perform unit tests
       - name: do units tests
         run: |
           python -m pytest tests/ -m unit
