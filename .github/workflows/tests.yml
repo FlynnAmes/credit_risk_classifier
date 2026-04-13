@@ -1,0 +1,59 @@
+#.github/workflows/tests.yml
+
+# workflow can be called. Requires lambda func name as argument
+on: 
+    workflow_call
+
+# set default region across all jobs, aswell as credentials to allow CLI calls
+env: 
+  AWS_DEFAULT_REGION: eu-west-2 
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+    tests:
+        runs-on: 'ubuntu-latest'
+  
+        steps:
+            # clone repo
+            - uses: actions/checkout@v5
+
+            # set env variable for the url of the api
+            - name: get api url
+              run: |
+                echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+                echo "the API URL variable is $API_URL"
+            
+            # get lambda function name if not already specified
+            - name: get lambda function name
+              run: |
+                echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
+
+            # set up python with version 3.14
+            - name: set up python
+              uses: actions/setup-python@v5
+              with: 
+                python-version: '3.14'
+                # cache environment for faster loading of requirements later
+                cache: 'pip'
+            
+            # then install PIP and dependencies
+            - name: install dependencies
+              run: |
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+            
+            # install project as a package
+            - name: install project
+              run: pip install -e .
+            
+            # perform unit tests
+            - name: do units tests
+              run: |
+                python -m pytest tests/ -m unit
+            
+            # and the integration tests (first make sure that function has finished updating if this is occurring)
+            - name: run integration tests
+              run: |
+                aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
+                python -m pytest tests/ -m integration
