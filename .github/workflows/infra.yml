@@ -51,7 +51,9 @@ jobs:
               run: |
                 terraform init
                 terraform validate 
-                terraform plan --no-color 2>&1 | tee tf_plan.txt
+                terraform plan 2>&1 | tee tf_plan.txt
+              # make sure runs in the infra dir!
+              working-directory: ./infra
             
             # now post the plan as a comment on the PR
             - name: put plan as comment on PR
@@ -60,6 +62,7 @@ jobs:
               #  create github token for step only, to auto-allow calls the GitHub API
               env:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              working-directory: ./infra
 
 
 #################################
@@ -78,11 +81,13 @@ jobs:
         - name: terraform init
           run: |
             terraform init
+          working-directory: ./infra
         
         # apply
         - name: apply terraform changes
           run: |
             terraform apply --auto-approve
+          working-directory: ./infra
         
         # run integration tests again afetr apply to make sure that work
         - name: run tests after apply
