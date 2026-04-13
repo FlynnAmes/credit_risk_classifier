@@ -62,6 +62,10 @@ jobs:
               run: |
                 python -m pytest tests/ -m unit
             
+            - name: check lambda function being defined
+              run: |
+                env | grep 'LAMBDA'
+
             # and the integration tests (first make sure that function has finished updating if this is occurring)
             - name: run integration tests
               run: |
