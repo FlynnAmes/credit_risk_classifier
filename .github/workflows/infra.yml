@@ -1,8 +1,13 @@
 # .github/workflows/infra.yml
 
-# creates PR request where changes being made to infrastructure
+# upon pull request chaning infra files produce a plan and save to that pull request
 
 on: 
+    # creates plan on pull request
+    pull_request:
+        branches: ['master']
+        paths: [infra/**]
+    # and applies once pushed
     push:
         branches: ['master']
         paths: [infra/**]
@@ -13,22 +18,77 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+
 jobs:
 
-    create_terraform_plan:
+
+    plan:
+
+        # define permissions for tokens
+        permissions:
+          pull-requests: write
+          contents: read
+
+
+
+        if: github.event_name == 'pull_request'
 
         runs-on: 'ubuntu-latest'
 
         steps:
-            # first set up terraform
+            # clone repo, set up terraform CLI
+            - name: clone repo
+              uses: actions/checkout@v4
+           
             - name: setup terraform
               uses: hashicorp/setup-terraform@v4
             
             
-            # then create the plan
-            - name: create terraform plan
+            # then create the plan and save to a file
+            - name: init, validate and create terraform plan
               run: |
-                terraform fmt
                 terraform init
                 terraform validate 
-                terraform plan
+                terraform plan -no-color 2>&1 | tee tf_plan.txt
+              # make sure runs in the infra dir!
+              working-directory: ./infra
+            
+            # now post the plan as a comment on the PR
+            - name: put plan as comment on PR
+              run: |
+                gh pr comment ${{ github.event.pull_request.number }} --body "$(cat tf_plan.txt)"
+              #  create github token for step only, to auto-allow calls the GitHub API
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              working-directory: ./infra
+
+
+#################################
+# once push to master, apply the changes
+    apply:
+
+      if: github.event_name == 'push'
+      
+      runs-on: 'ubuntu-latest'
+      steps:
+        
+        # clone repo, set up terraform CLI
+        - uses: actions/checkout@v4
+        - uses: hashicorp/setup-terraform@v3
+        # initialise to connect to remote state
+        - name: terraform init
+          run: |
+            terraform init
+          working-directory: ./infra
+        
+        # apply
+        - name: apply terraform changes
+          run: |
+            terraform apply --auto-approve
+          working-directory: ./infra
+        
+        # run integration tests again afetr apply to make sure that work
+        - name: run tests after apply
+          uses: ./.github/workflows/tests.yml
+
+
