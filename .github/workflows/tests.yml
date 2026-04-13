@@ -2,11 +2,21 @@
 
 # workflow can be called. Requires lambda func name as argument
 on: 
-    workflow_call
+    workflow_call:
+
+        inputs:
+            aws_default_region:
+                required: true
+                type: string
+        secrets:
+            aws_access_key_id: 
+                required: true
+            aws_secret_access_key:
+                required: true
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
-  AWS_DEFAULT_REGION: eu-west-2 
+  AWS_DEFAULT_REGION: ${{ inputs.aws_default_region }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -22,7 +32,6 @@ jobs:
             - name: get api url
               run: |
                 echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-                echo "the API URL variable is $API_URL"
             
             # get lambda function name if not already specified
             - name: get lambda function name
