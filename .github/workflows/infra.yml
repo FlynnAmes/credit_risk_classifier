@@ -21,7 +21,7 @@ env:
 jobs:
 
     plan:
-        if: github.event_name.name == 'pull_request'
+        if: github.event_name == 'pull_request'
 
         runs-on: 'ubuntu-latest'
 
@@ -51,7 +51,7 @@ jobs:
 # once push to master, apply the changes
     apply:
 
-      if: github.event_name.name == 'push'
+      if: github.event_name == 'push'
       
       runs-on: 'ubuntu-latest'
       steps:
