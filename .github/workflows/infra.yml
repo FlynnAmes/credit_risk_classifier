@@ -19,8 +19,6 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 
-  
-
 jobs:
 
 
@@ -51,7 +49,7 @@ jobs:
               run: |
                 terraform init
                 terraform validate 
-                terraform plan 2>&1 | tee tf_plan.txt
+                terraform plan -no-color 2>&1 | tee tf_plan.txt
               # make sure runs in the infra dir!
               working-directory: ./infra
             
