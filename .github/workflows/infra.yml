@@ -26,7 +26,10 @@ jobs:
         runs-on: 'ubuntu-latest'
 
         steps:
-            # first set up terraform
+            # clone repo, set up terraform CLI
+            - name: clone repo
+              uses: actions/checkout@v4
+           
             - name: setup terraform
               uses: hashicorp/setup-terraform@v4
             
