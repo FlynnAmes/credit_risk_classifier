@@ -1,9 +1,8 @@
 #.github/workflows/tests.yml
 
 # workflow can be called. Requires lambda func name as argument
-on: 
+on:     
     workflow_call:
-
         secrets:
             AWS_ACCESS_KEY: 
                 required: true
@@ -13,6 +12,8 @@ on:
 # test auto-run on a pull request to master
     pull_request:
         branches: ['master']
+# test can be manually triggered
+    workflow_dispatch:
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
@@ -65,4 +66,5 @@ jobs:
             - name: run integration tests
               run: |
                 aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
+                echo 'lambda function name is ${LAMBDA_FUNC_NAME}'
                 python -m pytest tests/ -m integration
