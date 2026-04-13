@@ -1,6 +1,6 @@
 ## Overview
 
-![CI](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/run_tests.yml/badge.svg?event=push)
+![CI](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/training_and_app.yml/badge.svg?event=push)
 
 
 This project implements an end-to-end machine learning system for predicting

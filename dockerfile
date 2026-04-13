@@ -1,6 +1,5 @@
-# initial dockerfile for repo, use to initiate app upon running the container
-# first get the base image. 
-# FROM python:3.11-slim
+# dockerfile for repo, use to explose app handler to aws lmabda function
+
 # use image compatible with lambda
 FROM public.ecr.aws/lambda/python:3.13
 # set working directory
@@ -19,8 +18,5 @@ COPY . .
 # create package out of the project
 RUN pip install -e .
 
-# start the application inside the container tell uvicorn to map port 8000 in container
-# to port 8000 on host
-# CMD ["uvicorn", "credit_risk_classifier.app:app", "--host", "0.0.0.0", "--port", "8000"]
 # point to handler so lambda can access it
 CMD ["credit_risk_classifier.app.handler"]

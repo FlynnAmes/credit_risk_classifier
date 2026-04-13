@@ -3,6 +3,7 @@
 resource "aws_ssm_parameter" "image_uri" {
   name  = "image_uri"
   type  = "String"
+  # note that subsequent changes to this image ssm use immutable git commit hash as the tag!
   value = "772928963391.dkr.ecr.eu-west-2.amazonaws.com/credit-risk-classifier-tf:latest"
 
   # so does not revert manual changes made by the CLI (so that can update docker image in CI)
