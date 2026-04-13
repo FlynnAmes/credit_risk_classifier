@@ -85,10 +85,22 @@ jobs:
         - name: apply terraform changes
           run: |
             terraform apply --auto-approve
-          working-directory: ./infra
-        
-        # run integration tests again afetr apply to make sure that work
-        - name: run tests after apply
-          uses: ./.github/workflows/tests.yml
+          working-directory: ./
+
+############################
+# run integration tests after applying terraform changes
+    run_final_tests:
+
+      # ensure always runs even if jobs are skipped (or fail, so can get feedback)
+      if: ${{ always() }}
+      # only run after applying
+      needs: ['apply']
+
+      # run integration tests again afetr apply to make sure that work
+      uses: ./.github/workflows/tests.yml
+      secrets:
+        AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
 
 
