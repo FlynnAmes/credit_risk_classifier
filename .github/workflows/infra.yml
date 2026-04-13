@@ -85,14 +85,16 @@ jobs:
         - name: apply terraform changes
           run: |
             terraform apply --auto-approve
-          working-directory: ./
+          working-directory: ./infra
 
 ############################
 # run integration tests after applying terraform changes
     run_final_tests:
 
-      # ensure always runs even if jobs are skipped (or fail, so can get feedback)
-      if: ${{ always() }}
+      # ensure always runs even if jobs are skipped (or fail, so can get feedback), but only if 
+      # event was a push
+      if: ${{ always() && github.event_name == 'push'}}
+
       # only run after applying
       needs: ['apply']
 
