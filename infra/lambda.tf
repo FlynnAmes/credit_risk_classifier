@@ -16,6 +16,7 @@ resource "aws_iam_role" "lambda_role" {
 
 }
 
+
 # assign policies for S3 read, and ability to log output to CLoudWatch
 resource "aws_iam_role_policy_attachment" "lambda_role_attachment" {
 
