@@ -4,19 +4,19 @@
 on: 
     workflow_call:
 
-        inputs:
-            aws_default_region:
-                required: true
-                type: string
         secrets:
-            aws_access_key_id: 
+            AWS_ACCESS_KEY: 
                 required: true
-            aws_secret_access_key:
+            AWS_SECRET_ACCESS_KEY:
                 required: true
+
+# test auto-run on a pull request to master
+    pull_request:
+        branches: ['master']
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
-  AWS_DEFAULT_REGION: ${{ inputs.aws_default_region }}
+  AWS_DEFAULT_REGION: 'eu-west-2'
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
