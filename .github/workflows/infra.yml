@@ -18,9 +18,21 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+
+  
+
 jobs:
 
+
     plan:
+
+        # define permissions for tokens
+        permissions:
+          pull-requests: write
+          contents: read
+
+
+
         if: github.event_name == 'pull_request'
 
         runs-on: 'ubuntu-latest'
