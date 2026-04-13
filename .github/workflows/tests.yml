@@ -66,5 +66,4 @@ jobs:
             - name: run integration tests
               run: |
                 aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
-                echo 'lambda function name is ${LAMBDA_FUNC_NAME}'
                 python -m pytest tests/ -m integration
