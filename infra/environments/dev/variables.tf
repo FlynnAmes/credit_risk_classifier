@@ -4,14 +4,41 @@ variable "region" {
   default     = "eu-west-2"
 }
 
-variable "s3_bucket_name" {
+
+# variable "lambda_func_name" {
+#   type        = string
+#   description = "name of lambda function"
+
+# }
+
+# variable "api_gateway_name" {
+#   type        = string
+#   description = "name of api gateway"
+
+# }
+
+# to be defined when running terraform apply
+variable "image_uri" {
   type        = string
-  description = "name of S3 bucket used to store model artifact"
+  description = "uri of docker image in ECR"
+}
+
+# to be defined when running terraform apply
+variable "model_key_name" {
+  type        = string
+  description = "key name of model artifact within the S3 bucket"
+}
+
+# name of environment that running in (e.g., devel, prod)
+variable "environment" {
+  type        = string
+  description = "name of current environment for infra"
 
 }
 
-variable "ecr_repo_name" {
+# name of project (for naming ecr repo etc)
+variable "project" {
   type        = string
-  description = "name of ecr repo to push docker image to"
+  description = "name of project"
 
 }
