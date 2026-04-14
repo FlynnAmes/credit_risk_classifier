@@ -1,10 +1,10 @@
 # to be defined when running terraform apply
 variable "image_uri" {
-    type = String
+    type = string
 }
 
 variable "model_key_name" {
-    type = String
+    type = string
 }
 
 

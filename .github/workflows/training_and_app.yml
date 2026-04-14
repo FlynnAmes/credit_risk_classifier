@@ -99,7 +99,7 @@ jobs:
       - name: create model key name
         id: create_model_key_name
         run: |
-            echo "MODEL_KEY_NAME=$(model_${{ github.sha }}).pkl" >> $GITHUB_ENV
+            echo "MODEL_KEY_NAME=$(models/${{ github.sha }}).pkl" >> $GITHUB_ENV
 
       # get bucket name to save artifact to.
       - name: get bucket name
@@ -107,9 +107,9 @@ jobs:
           echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
 
       # push model artifact to S3
-      - name: save model artifact to s3
+      - name: save model artifact to s3 (for now choose production model here)
         run: |
-          aws s3  cp "models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
+          aws s3 cp "models/tuned/xgb/standard.pkl" "s3://${MODEL_BUCKET_NAME}/${MODEL_KEY_NAME}"
       
       # update ssm parameter for the model key name
       - name: update SSM image uri
