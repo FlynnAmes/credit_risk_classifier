@@ -6,5 +6,3 @@ variable "image_uri" {
 variable "model_key_name" {
     type = string
 }
-
-
