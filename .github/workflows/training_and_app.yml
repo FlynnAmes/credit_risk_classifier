@@ -99,7 +99,7 @@ jobs:
       - name: create model key name
         id: create_model_key_name
         run: |
-            echo "MODEL_KEY_NAME=$(models/${{ github.sha }}.pkl)" >> $GITHUB_ENV
+            echo "MODEL_KEY_NAME=models/model_${{ github.sha }}.pkl" >> $GITHUB_ENV
 
       # get bucket name to save artifact to.
       - name: get bucket name
