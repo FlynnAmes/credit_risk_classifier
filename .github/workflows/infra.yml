@@ -48,7 +48,7 @@ jobs:
                 terraform validate 
                 terraform plan -no-color 2>&1 | tee tf_plan.txt
               # make sure runs in the infra dir!
-              working-directory: ./infra
+              working-directory: ./infra/environments/prod
             
             # now post the plan as a comment on the PR
             - name: put plan as comment on PR
