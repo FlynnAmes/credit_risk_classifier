@@ -200,10 +200,9 @@ jobs:
   # unit and integration tests
   test:
 
-    # ensure always runs even if jobs are skipped (or fail, so can get feedback)
-    if: ${{ always() }}
-    # must wait for building or retraining to finish
-    needs: ['retrain_model', 'push_docker_image']
+    # only run afetr terraform update step completed
+    # must wait for 
+    needs: ['apply']
 
     # use test workflow
     uses: ./.github/workflows/tests.yml
