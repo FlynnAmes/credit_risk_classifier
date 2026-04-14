@@ -158,10 +158,10 @@ jobs:
 #######################
 # apply terraform changes (for now, just apply because only changing image and key name)
 # in future, will use seperate dev environment
-  apply:
+  apply_terraform_changes:
 
-    # ensure always runs even if jobs are skipped or fail (for now, in future should make sure that no run when fail)
-    if: ${{ always() }}
+    # only runs when the previous jobs have not failed
+    if: ${{ always() && needs.retrain_model.result != 'failure' && needs.push_docker_image.result != 'failure' }}
     needs: ['retrain_model', 'push_docker_image']
 
     runs-on: 'ubuntu-latest'
@@ -202,7 +202,7 @@ jobs:
 
     # only run afetr terraform update step completed
     # must wait for 
-    needs: ['apply']
+    needs: ['apply_terraform_changes']
 
     # use test workflow
     uses: ./.github/workflows/tests.yml
