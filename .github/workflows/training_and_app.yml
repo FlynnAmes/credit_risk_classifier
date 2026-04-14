@@ -68,11 +68,11 @@ jobs:
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      # set up python with version 3.14
+      # set up python with same version as docker file
       - name: set up python
         uses: actions/setup-python@v5
         with: 
-          python-version: '3.14'
+          python-version: '3.13'
           # cache environment for faster loading of requirements later
           cache: 'pip'
         

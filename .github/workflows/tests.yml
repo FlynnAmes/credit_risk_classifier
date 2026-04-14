@@ -43,7 +43,7 @@ jobs:
             - name: set up python
               uses: actions/setup-python@v5
               with: 
-                python-version: '3.14'
+                python-version: '3.13'
                 # cache environment for faster loading of requirements later
                 cache: 'pip'
             
