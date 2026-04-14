@@ -8,12 +8,20 @@ on:
                 required: true
             AWS_SECRET_ACCESS_KEY:
                 required: true
+        
+        inputs:
+          environment: 
+            description: "environment (dev or prod) to test"
+            type: string
+            required: true
 
-# test auto-run on a pull request to master
-    pull_request:
-        branches: ['master']
 # test can be manually triggered
     workflow_dispatch:
+      inputs:
+          environment: 
+            description: "environment (devel or prod) to test"
+            type: string
+            required: true
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
@@ -32,12 +40,12 @@ jobs:
             # set env variable for the url of the api
             - name: get api url
               run: |
-                echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+                echo "API_URL=$(aws ssm get-parameter --name api-url-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
             
             # get lambda function name if not already specified
             - name: get lambda function name
               run: |
-                echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
+                echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda-function-name-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
 
             # set up python with version 3.14
             - name: set up python
@@ -61,10 +69,6 @@ jobs:
             - name: do units tests
               run: |
                 python -m pytest tests/ -m unit
-            
-            - name: check lambda function being defined
-              run: |
-                env | grep 'LAMBDA'
 
             # and the integration tests (first make sure that function has finished updating if this is occurring)
             - name: run integration tests
