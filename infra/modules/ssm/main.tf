@@ -18,7 +18,7 @@ resource "aws_ssm_parameter" "model_key_name" {
 resource "aws_ssm_parameter" "model_bucket_name" {
   name  = "model-bucket-name-${var.project}-${var.environment}"
   type  = "String"
-  value = aws_s3_bucket.s3.bucket
+  value = var.s3_bucket_name
 
 }
 
@@ -26,7 +26,7 @@ resource "aws_ssm_parameter" "model_bucket_name" {
 resource "aws_ssm_parameter" "ecr_repo_url" {
   name  = "ecr-repo-url-${var.project}-${var.environment}"
   type  = "String"
-  value = aws_ecr_repository.ecr_repo.repository_url
+  value = var.ecr_repo_url
 }
 
 # # name of the lambda function

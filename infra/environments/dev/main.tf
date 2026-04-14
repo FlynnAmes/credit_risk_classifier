@@ -20,11 +20,16 @@ module "ecr" {
 module "ssm" {
   source         = "../../modules/ssm"
   ecr_repo_name  = "${var.project}-${var.environment}"
-  s3_bucket_name = "${var.project}-${var.environment}"
+  # collect putputs from modules
+  ecr_repo_url   = module.ecr.ecr_repo_url
+  s3_bucket_name = module.s3.s3_bucket_name
   environment    = var.environment
   project        = var.project
+
+
   # pass these upon terraform apply
-  image_uri      = ""
-  model_key_name = ""
+  image_uri      = var.image_uri
+  model_key_name = var.model_key_name
+
 
 }

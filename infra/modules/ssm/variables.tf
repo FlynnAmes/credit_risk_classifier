@@ -23,6 +23,14 @@ variable "ecr_repo_name" {
   
 }
 
+# url of the ecr
+variable "ecr_repo_url" {
+    type        = string
+  description = "name of ecr repo for docker image"
+  
+}
+
+
 # name of environment that running in (e.g., devel, prod)
 variable "environment" {
     type        = string
