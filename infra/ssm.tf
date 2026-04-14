@@ -1,35 +1,19 @@
 
-# uri for docker image in ECR
+# uri for docker image in ECR (passed in as argument upon terraform apply)
 resource "aws_ssm_parameter" "image_uri" {
   name  = "image_uri"
   type  = "String"
-  # note that subsequent changes to this image ssm use immutable git commit hash as the tag!
-  value = "772928963391.dkr.ecr.eu-west-2.amazonaws.com/credit-risk-classifier-tf:latest"
+  value = var.image_uri
 
-  # so does not revert manual changes made by the CLI (so that can update docker image in CI)
-  # note that is destroyed and redeployed, would need to manually update value above so not reset
-  # to the initial image
-  lifecycle {
-    ignore_changes = [
-      value,
-    ]
-  }
 }
 
-# name of model artifact 'file'
+# name of model artifact 'file' (passed in as argument upon terraform apply)
 resource "aws_ssm_parameter" "model_key_name" {
   name  = "model_key_name"
   type  = "String"
-  value = "standard.pkl"
+  value = var.model_key_name
 
-  lifecycle {
-    ignore_changes = [
-      value,
-    ]
-  }
 }
-
-# all ssm parameter below here shouldn't be changed via CLI
 
 # name of bucket containing model artifact
 resource "aws_ssm_parameter" "model_bucket_name" {

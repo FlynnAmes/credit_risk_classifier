@@ -95,21 +95,27 @@ jobs:
           python -m credit_risk_classifier.tune
       
       
-      # get bucket and artifact name to save artifact to 
-      # for now always using same model which defined as key_name (so no need to update the key name)
-      - name: get SSM params
-        id: get_SSM_params
-        
-      # append to GITHUB env so persists across steps
+      # define model key name using commit hash (Append to GITHUB env so persists across steps.)
+      - name: create model key name
+        id: create_model_key_name
+        run: |
+            echo "MODEL_KEY_NAME=$(model_${{ github.sha }}).pkl" >> $GITHUB_ENV
+
+      # get bucket name to save artifact to.
+      - name: get bucket name
         run: |
           echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "MODEL_KEY_NAME=$(aws ssm get-parameter  --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "the model bucket name is ${MODEL_BUCKET_NAME} and model key name ${MODEL_KEY_NAME}"
-      # push model artifact to S3 (using env variables defined above for the bucket name)
+
+      # push model artifact to S3
       - name: save model artifact to s3
         run: |
           aws s3  cp "models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
-        
+      
+      # update ssm parameter for the model key name
+      - name: update SSM image uri
+        run: |
+          aws ssm put-parameter  --name model_key_name --overwrite --value $MODEL_KEY_NAME
+
 ###########################################
 
   # push new image when changes made to the app
@@ -148,17 +154,51 @@ jobs:
       - name: update SSM image uri
         run: |
           aws ssm put-parameter  --name image_uri --overwrite --value $ECR_REPO_URL:${{ github.sha }}
-    
-    # update lambda function via aws CLI (not using Terraform here. When next apply, lambda is configured so 
-    # that will be set to the SSM image URI anyway)
-      - name: update lambda function
-        run: |
-          aws lambda update-function-code --function-name $LAMBDA_FUNC_NAME --image-uri $ECR_REPO_URL:${{ github.sha }}
-    
+
+#######################
+# apply terraform changes (for now, just apply because only changing image and key name)
+# in future, will use seperate dev environment
+  apply:
+
+    # ensure always runs even if jobs are skipped or fail (for now, in future should make sure that no run when fail)
+    if: ${{ always() }}
+    needs: ['retrain_model', 'push_docker_image']
+
+    runs-on: 'ubuntu-latest'
+    steps:
+            # clone repo, set up terraform CLI
+            - name: clone repo
+              uses: actions/checkout@v4
+           
+            # load in image uri and model key name from ssm
+            - name: get ssm params
+              run: |
+                echo "IMAGE_URI=$(aws ssm get-parameter --name image_uri --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+                echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+
+            - name: setup terraform
+              uses: hashicorp/setup-terraform@v4
+            
+            
+            # then create the plan and save to a file
+            - name: init, validate
+              run: |
+                terraform init
+                terraform validate 
+              # make sure runs in the infra dir!
+              working-directory: ./infra
+            
+            # and apply changes (to devel environment)
+            - name: apply terraform changes
+              run: |
+                terraform apply --auto-approve -var "image_uri=${IMAGE_URI}" -var "model_key_name=${MODEL_KEY_NAME}"
+              working-directory: ./infra
+
+
 
 ####################################
   # unit and integration tests
-  tests:
+  test:
 
     # ensure always runs even if jobs are skipped (or fail, so can get feedback)
     if: ${{ always() }}

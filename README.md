@@ -93,6 +93,7 @@ All artifacts can be regenerated using the training pipeline.
 - Implemented model caching in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise cold-start latency 
 - Applied API rate and burst limiting to prevent abuse
 - Designed system to separate training and inference concerns, with model artifacts stored in S3 and loaded dynamically at runtime
+- Instantenous inference chosen over batch inference to simulate a fast-response, real-time prediction (as if using a mobile app)
 
 
 ## Model
