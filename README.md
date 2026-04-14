@@ -119,7 +119,7 @@ Therefore, probabilities of default, obtained during inference, should not be in
 The API is live on AWS Lambda and a prediction can be obtained via a POST HTTP request (i.e., one command, no setup), by running the following in a linux terminal
 
 ``` 
-curl -X POST https://dcq552h5h8.execute-api.eu-west-2.amazonaws.com/predict \
+curl -X POST https://wb4so1vnna.execute-api.eu-west-2.amazonaws.com/predict \
 -H "Content-Type: application/json" \
 -d @features.json
 ```
