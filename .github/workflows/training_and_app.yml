@@ -99,7 +99,7 @@ jobs:
       - name: create model key name
         id: create_model_key_name
         run: |
-            echo "MODEL_KEY_NAME=$(models/${{ github.sha }}).pkl" >> $GITHUB_ENV
+            echo "MODEL_KEY_NAME=$(models/${{ github.sha }}.pkl)" >> $GITHUB_ENV
 
       # get bucket name to save artifact to.
       - name: get bucket name
@@ -200,6 +200,8 @@ jobs:
   # unit and integration tests
   test:
 
+    # ensure always runs so long as the terraform apply did not fail
+    if: ${{ always() && needs.apply_terraform_changes.result != 'failure'}}
     # only run afetr terraform update step completed
     # must wait for 
     needs: ['apply_terraform_changes']
