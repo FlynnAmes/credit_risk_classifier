@@ -196,8 +196,7 @@ jobs:
     with:
       environment: 'dev'
 
-
-
+      
 #####################
 # if push, apply exact changes to prod version
 #####################
@@ -260,8 +259,6 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     with:
       environment: 'prod'
-
-
 
       
         
