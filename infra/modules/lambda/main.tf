@@ -36,7 +36,7 @@ resource "aws_lambda_function" "lambda" {
 
   package_type = "Image"
   # Use SSM param to define image uri (so that can update in CI and terraform gets the changes)
-  image_uri = aws_ssm_parameter.image_uri.value
+  image_uri = var.ecr_image_uri
   # give 1Gb of memory
   memory_size = var.lambda_memory_limit
   timeout     = var.lambda_timeout_limit
@@ -47,8 +47,8 @@ resource "aws_lambda_function" "lambda" {
       # so that knows whether to run in local or cloud mode
       ENV = "aws"
       # so that can load in model from S3 (rather than hardcoding path)
-      model_bucket_name = aws_ssm_parameter.model_bucket_name.value
-      model_key_name    = aws_ssm_parameter.model_key_name.value
+      model_bucket_name = var.model_bucket_name
+      model_key_name    = var.model_key_name
     }
   }
 

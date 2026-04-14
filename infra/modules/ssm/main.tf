@@ -29,12 +29,12 @@ resource "aws_ssm_parameter" "ecr_repo_url" {
   value = var.ecr_repo_url
 }
 
-# # name of the lambda function
-# resource "aws_ssm_parameter" "lambda_function_name" {
-#   name  = "lambda-function-name-${var.project}-${var.environment}"
-#   type  = "String"
-#   value = aws_lambda_function.lambda.function_name
-# }
+# name of the lambda function
+resource "aws_ssm_parameter" "lambda_function_name" {
+  name  = "lambda-function-name-${var.project}-${var.environment}"
+  type  = "String"
+  value = var.lambda_function_name
+}
 
 # # name of the url for the API
 # resource "aws_ssm_parameter" "api_url" {

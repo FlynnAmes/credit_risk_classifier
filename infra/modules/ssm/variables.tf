@@ -31,6 +31,13 @@ variable "ecr_repo_url" {
 }
 
 
+# name of the lambda function
+variable "lambda_function_name" {
+    type        = string
+  description = "name of lambda function"
+  
+}
+
 # name of environment that running in (e.g., devel, prod)
 variable "environment" {
     type        = string
