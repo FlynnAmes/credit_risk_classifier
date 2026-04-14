@@ -8,7 +8,7 @@ resource "aws_ssm_parameter" "image_uri" {
 
 # name of model artifact 'file' (passed in as argument upon terraform apply)
 resource "aws_ssm_parameter" "model_key_name" {
-  name  = "model-key_name-${var.project}-${var.environment}"
+  name  = "model-key-name-${var.project}-${var.environment}"
   type  = "String"
   value = var.model_key_name
 
@@ -36,9 +36,9 @@ resource "aws_ssm_parameter" "lambda_function_name" {
   value = var.lambda_function_name
 }
 
-# # name of the url for the API
-# resource "aws_ssm_parameter" "api_url" {
-#   name  = "api-url-${var.project}-${var.environment}"
-#   type  = "String"
-#   value = aws_apigatewayv2_api.api.api_endpoint
-# }
+# name of the url for the API
+resource "aws_ssm_parameter" "api_url" {
+  name  = "api-url-${var.project}-${var.environment}"
+  type  = "String"
+  value = var.api_url
+}

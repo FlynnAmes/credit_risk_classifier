@@ -38,6 +38,14 @@ variable "lambda_function_name" {
   
 }
 
+# the api url
+variable "api_url" {
+    type        = string
+  description = "url of the API"
+  
+}
+
+
 # name of environment that running in (e.g., devel, prod)
 variable "environment" {
     type        = string

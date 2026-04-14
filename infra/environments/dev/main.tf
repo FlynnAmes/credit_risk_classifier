@@ -40,5 +40,12 @@ module "ssm" {
   ecr_repo_url         = module.ecr.ecr_repo_url
   s3_bucket_name       = module.s3.s3_bucket_name
   lambda_function_name = module.lambda.lambda_function_name
+  api_url              = module.api_gateway.api_url
 }
 
+module "api_gateway" {
+  source           = "../../modules/api_gateway"
+  api_gateway_name = "${var.project}-${var.environment}"
+  lambda_arn       = module.lambda.lambda_arn
+  lambda_function_name = module.lambda.lambda_function_name
+}

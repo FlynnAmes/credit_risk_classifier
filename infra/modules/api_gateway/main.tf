@@ -12,7 +12,7 @@ resource "aws_apigatewayv2_integration" "integration" {
   # so can communicate with lambda
   integration_type = "AWS_PROXY"
   # get uri of the lambda function
-  integration_uri = aws_lambda_function.lambda.invoke_arn
+  integration_uri = var.lambda_arn
 }
 
 # create stage and set to default for now
@@ -59,7 +59,7 @@ resource "aws_apigatewayv2_route" "ready" {
 resource "aws_lambda_permission" "lambda_permission" {
 
   # lambda function
-  function_name = aws_lambda_function.lambda.function_name
+  function_name = var.lambda_function_name
   # let invoke
   action = "lambda:InvokeFunction"
   # let APIgateway do it
