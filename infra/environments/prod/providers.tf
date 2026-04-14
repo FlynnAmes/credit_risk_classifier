@@ -1,5 +1,5 @@
 terraform {
-    # keep terraform version flexible for now
+  # keep terraform version flexible for now
   required_version = "~> 1.0"
 
   required_providers {
