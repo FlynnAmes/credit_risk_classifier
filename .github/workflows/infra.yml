@@ -45,12 +45,12 @@ jobs:
               uses: hashicorp/setup-terraform@v4
             
             
-            # then create the plan and save to a file
+            # then create the plan and save to a file (remove locking for plan as not needed for this)
             - name: init, validate and create terraform plan
               run: |
                 terraform init
                 terraform validate 
-                terraform plan -no-color 2>&1 | tee tf_plan.txt
+                terraform plan -no-color 2>&1 -lock=false | tee tf_plan.txt
               # make sure runs in the infra dir!
               working-directory: ./infra/environments/prod
             
