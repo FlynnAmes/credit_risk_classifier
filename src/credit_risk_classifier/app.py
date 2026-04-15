@@ -109,6 +109,9 @@ env = os.getenv("ENV", "local")
 if env not in set(('aws', 'local')):
     raise ValueError(f'environment variable env is currently {env}, should either be aws or local')
 
+# set up the logger
+logger = setup_logger(env)
+
 #############
 # set constants
 #############
@@ -120,6 +123,9 @@ if env == 'aws':
     # these are stored in SSM. In aws, they are set as environment variables
     BUCKET_NAME = os.getenv('model_bucket_name')
     KEY_NAME = os.getenv('model_key_name')
+
+    logger.info(f'model bucket name is: {BUCKET_NAME}')
+    logger.info(f'model key name is: {KEY_NAME}')
 
     # raise error if not defined
     if BUCKET_NAME is None or KEY_NAME is None:
@@ -145,10 +151,8 @@ else:
         )
 
 ###############
-# set up logger and load in model
+# load in model
 ###############
-
-logger = setup_logger(env)
 
 model = load_production_model(env)
 logger.info('model loading completed')

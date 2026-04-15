@@ -51,7 +51,7 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 │  
 ├── examples/                      # example json payload file for POST request
 │ 
-├── infra/                         # Terraform files for managing aws infrastructure
+├── infra/                         # Terraform files for managing aws infrastructure (dev/prod environments)
 │ 
 ├── logs/                          # training, validation, and inference logs (gitignored)
 ├── models/                        # trained model artifacts (gitignored except one demo artifact)
