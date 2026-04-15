@@ -70,5 +70,4 @@ resource "aws_lambda_permission" "lambda_permission" {
   action = "lambda:InvokeFunction"
   # let APIgateway do it
   principal = "apigateway.amazonaws.com"
-
 }
