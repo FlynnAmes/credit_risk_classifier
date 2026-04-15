@@ -1,4 +1,4 @@
-# .github/workflows/build.yml
+# .github/workflows/ci-cd.yml
 
 # retrains model and uploads to S3 bucket when changes to src code or config are made
 # builds and uploads docker image to ECR when changes to apps are made
@@ -15,11 +15,6 @@ on:
   pull_request:
     branches: ['master']
     paths: ['src/**', 'config.*']
-
-# # create concurrency group with other jobs where terraform apply is run (because of state locking)
-# concurrency:
-#   group: "infra_changer_group"
-#   cancel-in-progress: false
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
