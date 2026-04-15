@@ -117,7 +117,7 @@ All artifacts can be regenerated using the training pipeline.
 
 - Defined complete AWS infrastructure using Terraform (Lambda, API Gateway, S3, ECR, IAM), to permit reproducible, version-controlled deployments. 
 - Configured remote state (S3 + locking) to prevent state-configuration drift
-- Configured promotion from dev to prod environments within CI/CD, using immutable image and model versioning (commit SHA), to maintain operational capacity and tracability of production model
+- Configured promotion from dev to prod environments within CI/CD, using immutable image and model versioning (commit SHA), to maintain operational capacity and traceability of production model
 - Chose AWS Lambda over EC2 to minimise operational overhead and cost (to maintain live API within free-tier constraints), accepting cold start latency as a trade-off
 - Instantaneous inference chosen over batch inference to simulate a fast-response, real-time prediction
 - Ensured environment agnostic design (via environment variables), permitting both local and cloud deployment
