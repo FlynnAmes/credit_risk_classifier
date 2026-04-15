@@ -40,8 +40,6 @@ def log_tuning_results(model_object, model_name: str , scoring_name: str):
         json.dump(tuning_results, f, indent=4)
     
  
-
-
 def save_model(model_object, model_name: str, scoring_name: str):
     """ save tuned model to pkl format, given name of model (string) and scoring (e.g., lenient) """
 
@@ -105,7 +103,6 @@ def tune_models(config_path):
 
             print('\n tuning params logged \n')
         
-
 
 if __name__ == '__main__':
     # if file called then use default configuration path
