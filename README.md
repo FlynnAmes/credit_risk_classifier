@@ -69,7 +69,7 @@ The API returns:
 The system is designed to operate within AWS free-tier constraints. The system can also be run locally (see later section).
 
 
-## Repository Structure
+## Repository structure
 
 ```
 ├── data/
@@ -218,5 +218,4 @@ When running locally, the probability threshold (lenient, standard, aggressive) 
 ## Future extensions
 
 - Model monitoring using inference logs (data drift)
-- Experiment tracking and model versioning (MLflow)
 
