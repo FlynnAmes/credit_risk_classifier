@@ -22,6 +22,12 @@ resource "aws_apigatewayv2_stage" "stage" {
   # for now keep singular stage for API, with different APIs for different envs (to decouple app from the infrastructure)
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    throttling_burst_limit = var.burst_limit
+    throttling_rate_limit = var.rate_limit
+  }
+
 }
 
 ######
