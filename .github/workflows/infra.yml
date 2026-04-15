@@ -18,9 +18,35 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+# create concurrency group with other jobs where terraform apply is run (because of state locking)
+concurrency:
+  group: "infra_changer_group"
+  cancel-in-progress: false
 
 jobs:
 
+    # job that gets image uri and model key name needed to perform both plan and apply (for CI, but will need
+    # for infra also)
+    get_aws_params:
+
+      runs-on: 'ubuntu-latest'
+
+      outputs:
+        image_uri: ${{ steps.get_ssm.outputs.IMAGE_URI }}
+        model_key_name: ${{ steps.get_ssm.outputs.MODEL_KEY_NAME }}
+
+      steps:
+        - name: clone repo
+          uses: actions/checkout@v4
+
+        # note that if this workflow happens to run before CI, will be giving old key name etc.
+        # however upon push when use terraform apply, means will be using most recent version
+        - name: get ssm params from current dev setup
+          id: get_ssm
+          run: |
+            echo "IMAGE_URI=$(aws ssm get-parameter --name image-uri-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_OUTPUT 
+            echo "MODEL_KEY_NAME=$(aws ssm get-parameter --name model-key-name-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_OUTPUT 
+##########################
     plan:
 
         # define permissions for tokens
@@ -31,6 +57,7 @@ jobs:
         if: github.event_name == 'pull_request'
 
         runs-on: 'ubuntu-latest'
+        needs: 'get_aws_params'
 
         steps:
             # clone repo, set up terraform CLI
@@ -41,12 +68,11 @@ jobs:
               uses: hashicorp/setup-terraform@v4
             
             
-            # then create the plan and save to a file
+            # then create the plan and save to a file (remove locking for plan as not needed for this)
             - name: init, validate and create terraform plan
               run: |
                 terraform init
-                terraform validate 
-                terraform plan -no-color 2>&1 | tee tf_plan.txt
+                terraform plan 2>&1 -var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}" -no-color -lock=false | tee tf_plan.txt
               # make sure runs in the infra dir!
               working-directory: ./infra/environments/prod
             
@@ -67,6 +93,7 @@ jobs:
       if: github.event_name == 'push'
       
       runs-on: 'ubuntu-latest'
+      needs: 'get_aws_params'
       steps:
         
         # clone repo, set up terraform CLI
@@ -81,7 +108,7 @@ jobs:
         # apply
         - name: apply terraform changes
           run: |
-            terraform apply --auto-approve
+            terraform apply -auto-approve var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}"
           working-directory: ./infra/environments/prod
         
         - name: wait for API and lambda to finish updating

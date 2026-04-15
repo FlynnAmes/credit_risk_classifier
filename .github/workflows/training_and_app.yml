@@ -16,6 +16,11 @@ on:
     branches: ['master']
     paths: ['src/**', 'config.*']
 
+# create concurrency group with other jobs where terraform apply is run (because of state locking)
+concurrency:
+  group: "infra_changer_group"
+  cancel-in-progress: false
+
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
   AWS_DEFAULT_REGION: eu-west-2 
@@ -230,8 +235,9 @@ jobs:
         run: |
           aws s3 cp s3://${MODEL_BUCKET_NAME_DEV}/${MODEL_KEY_NAME_DEV} s3://${MODEL_BUCKET_NAME_PROD}/${MODEL_KEY_NAME_DEV}
         
-      - name: promote image from dev to prod
+      - name: promote image from dev to prod (and authenticate)
         run: |
+          aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
           docker pull $IMAGE_URI_DEV
           docker tag $ECR_REPO_URL_PROD:${{ github.sha }}
           docker push $ECR_REPO_URL_PROD:${{ github.sha }}
