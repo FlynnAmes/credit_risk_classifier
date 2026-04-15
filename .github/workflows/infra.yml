@@ -21,15 +21,12 @@ env:
 
 jobs:
 
-
     plan:
 
         # define permissions for tokens
         permissions:
           pull-requests: write
           contents: read
-
-
 
         if: github.event_name == 'pull_request'
 
@@ -51,7 +48,7 @@ jobs:
                 terraform validate 
                 terraform plan -no-color 2>&1 | tee tf_plan.txt
               # make sure runs in the infra dir!
-              working-directory: ./infra
+              working-directory: ./infra/environments/prod
             
             # now post the plan as a comment on the PR
             - name: put plan as comment on PR
@@ -60,7 +57,7 @@ jobs:
               #  create github token for step only, to auto-allow calls the GitHub API
               env:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              working-directory: ./infra
+              working-directory: ./infra/environments/prod
 
 
 #################################
@@ -79,13 +76,17 @@ jobs:
         - name: terraform init
           run: |
             terraform init
-          working-directory: ./infra
+          working-directory: ./infra/environments/prod
         
         # apply
         - name: apply terraform changes
           run: |
             terraform apply --auto-approve
-          working-directory: ./infra
+          working-directory: ./infra/environments/prod
+        
+        - name: wait for API and lambda to finish updating
+          run: |
+            sleep 15
 
 ############################
 # run integration tests after applying terraform changes
@@ -103,6 +104,5 @@ jobs:
       secrets:
         AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-
-
+      with:
+        environment: 'prod'

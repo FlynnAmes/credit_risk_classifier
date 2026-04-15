@@ -2,14 +2,18 @@
 
 # retrains model and uploads to S3 bucket when changes to src code or config are made
 # builds and uploads docker image to ECR when changes to apps are made
-
+# both done on dev version initially, then tested, before any final change to prod
 
 # triggers
 on:
   push:
-    # note that eventually only want to run when push to master?
-    branches: ['master', 'devel']
+    # run only on push or PR to master
+    branches: ['master']
     # whenever change the config or src
+    paths: ['src/**', 'config.*']
+  
+  pull_request:
+    branches: ['master']
     paths: ['src/**', 'config.*']
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
@@ -19,43 +23,17 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
-
-  # get the files changed during commit as filter for which jobs run
-  get_changed_files:
-
-    runs-on: 'ubuntu-latest'
-    # set outputs counter for files changed, from the $GITHUB_OUTPUT file
-    outputs:
-      training_changed: ${{ steps.train_files_check.outputs.TRAINING_CHANGED_COUNT}}
-      app_changed: ${{ steps.app_files_check.outputs.APP_CHANGED_COUNT }}
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          # get previous commit histroy to enable git diff
-          fetch-depth: 2
-      
-      - id: train_files_check
-          # compare file of current vs the previous commit (count num of files changed)
-          # for now manual specify which files affect app and which training
-        run: |
-          echo TRAINING_CHANGED_COUNT=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '^src/credit_risk_classifier/t.*\.py|.*config.yml' || echo '0') >> $GITHUB_OUTPUT
-
-      - id: app_files_check
-        run: |
-          echo APP_CHANGED_COUNT=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -cE '.*app\.py|.*inference\.py|.*schemas\.py' || echo '0') >> $GITHUB_OUTPUT
-
   
   # retrain model when changes made to the training and tuning code
   retrain_model:
     # on linux
     runs-on: 'ubuntu-latest'
 
-    # ensure that only runs once figure out what files have been changed
-    needs: get_changed_files
+    if: ${{ github.event_name == 'pull_request' }}
 
-    # if training files have been changed, then run the steps below
-    if: needs.get_changed_files.outputs.training_changed > 0
+    outputs: 
+      model_key_name: ${{ steps.save_vars.outputs.MODEL_KEY_NAME }}
+      model_bucket_name: ${{ steps.save_vars.outputs.MODEL_bucket_NAME }}
 
     steps:
       # clone repo
@@ -68,11 +46,11 @@ jobs:
           echo '{"key": "${{ secrets.KAGGLE_API_TOKEN }}", "username": "${{ secrets.KAGGLE_USERNAME }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      # set up python with version 3.14
+      # set up python with same version as docker file
       - name: set up python
         uses: actions/setup-python@v5
         with: 
-          python-version: '3.14'
+          python-version: '3.13'
           # cache environment for faster loading of requirements later
           cache: 'pip'
         
@@ -94,32 +72,42 @@ jobs:
           python -m credit_risk_classifier.train
           python -m credit_risk_classifier.tune
       
+      # define model key name using commit hash 
+      - name: create model key name and paste to env and output so can use later
+        id: create_model_key_name
+        run: |
+            echo "MODEL_KEY_NAME=models/model_${{ github.sha }}.pkl" >> $GITHUB_ENV
+
+      # get bucket name to save artifact to in dev
+      - name: get bucket name
+        run: |
+          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model-bucket-name-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
       
-      # get bucket and artifact name to save artifact to 
-      # for now always using same model which defined as key_name (so no need to update the key name)
-      - name: get SSM params
-        id: get_SSM_params
-        
-      # append to GITHUB env so persists across steps
+      # push model artifact to S3
+      - name: save model artifact to s3 (for now choose production model here)
         run: |
-          echo "MODEL_BUCKET_NAME=$(aws ssm get-parameter  --name model_bucket_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "MODEL_KEY_NAME=$(aws ssm get-parameter  --name model_key_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "the model bucket name is ${MODEL_BUCKET_NAME} and model key name ${MODEL_KEY_NAME}"
-      # push model artifact to S3 (using env variables defined above for the bucket name)
-      - name: save model artifact to s3
+          aws s3 cp "models/tuned/xgb/standard.pkl" "s3://${MODEL_BUCKET_NAME}/${MODEL_KEY_NAME}"
+      
+      # append env variables to output so can use in later jobs
+      - name: save vars to output
+        id: save_vars
         run: |
-          aws s3  cp "models/tuned/xgb/$MODEL_KEY_NAME" "s3://$MODEL_BUCKET_NAME"
-        
+          echo "MODEL_KEY_NAME=${MODEL_KEY_NAME}" >> $GITHUB_OUTPUT
+          echo "MODEL_BUCKET_NAME=${MODEL_BUCKET_NAME}" >> $GITHUB_OUTPUT
+      
+
 ###########################################
 
   # push new image when changes made to the app
   push_docker_image:
     runs-on: 'ubuntu-latest'
 
-    # must wait for job that figures out which files have been changed
-    needs: get_changed_files
+    outputs:
+      image_uri: ${{ steps.save_vars.outputs.IMAGE_URI }}
+      lambda_function_name: ${{ steps.save_vars.outputs.LAMBDA_FUNC_NAME }}
 
-    if: needs.get_changed_files.outputs.app_changed > 0
+
+    if: ${{ github.event_name == 'pull_request' }}
 
     steps:
 
@@ -129,11 +117,11 @@ jobs:
     # get the ECR repo url and lambda function name from AWS SSM
       - name: get ecr url and lambda function name
         run: |
-          echo "ECR_REPO_URL=$(aws ssm get-parameter --name ecr_repo_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "ECR_REPO_URL=$(aws ssm get-parameter --name ecr-repo-url-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda-function-name-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
     
     # build the docker image and push to ECR
-      - name: build the docker image and push to ECR
+      - name: build the docker image and push to dev ECR
       # need to authenticate first before pushing. Using git commit hash for the image tag
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
@@ -144,32 +132,136 @@ jobs:
           -t $ECR_REPO_URL:${{ github.sha }} \
           --push .
     
-    # now that pushed to ECR, update AWS SSM parameter with the new image URL
-      - name: update SSM image uri
+    # append env variables to output so can use in later jobs
+      - name: save vars to output
+        id: save_vars
         run: |
-          aws ssm put-parameter  --name image_uri --overwrite --value $ECR_REPO_URL:${{ github.sha }}
-    
-    # update lambda function via aws CLI (not using Terraform here. When next apply, lambda is configured so 
-    # that will be set to the SSM image URI anyway)
-      - name: update lambda function
-        run: |
-          aws lambda update-function-code --function-name $LAMBDA_FUNC_NAME --image-uri $ECR_REPO_URL:${{ github.sha }}
-    
+          echo "IMAGE_URI=${ECR_REPO_URL}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNC_NAME=${ECR_REPO_URL}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  
+#######################
+# apply terraform changes (for now, just apply because only changing image and key name)
+# in future, will use seperate dev environment
+  apply_terraform_changes:
+
+    # only runs when the previous jobs have not failed
+    needs: ['retrain_model', 'push_docker_image']
+
+    runs-on: 'ubuntu-latest'
+
+    # take model key name, image uri constructed in previous steps, as well as bucket name extracted
+    env:
+      IMAGE_URI: ${{ needs.push_docker_image.outputs.image_uri }}
+      MODEL_KEY_NAME: ${{ needs.retrain_model.outputs.model_key_name }}
+      MODEL_BUCKET_NAME: ${{ needs.retrain_model.outputs.model_bucket_name }}
+
+    steps:
+            # clone repo
+            - name: clone repo
+              uses: actions/checkout@v4
+           
+            # set up terraform CLI
+            - name: setup terraform
+              uses: hashicorp/setup-terraform@v4
+            
+            
+            # then create the plan and save to a file
+            - name: init, validate
+              run: |
+                terraform init
+                terraform validate 
+              # make sure runs in the dev directory!
+              working-directory: ./infra/environments/dev
+            
+            # and apply changes (to dev environment)
+            - name: apply terraform changes
+              run: |
+                terraform apply -auto-approve=true -var-file=dev.tfvars -var "image_uri=${IMAGE_URI}" -var "model_key_name=${MODEL_KEY_NAME}"
+              working-directory: ./infra/environments/dev
+
 
 ####################################
-  # unit and integration tests
-  tests:
+  # unit and integration tests upon dev version
+  test:
 
-    # ensure always runs even if jobs are skipped (or fail, so can get feedback)
-    if: ${{ always() }}
-    # must wait for building or retraining to finish
-    needs: ['retrain_model', 'push_docker_image']
+    # only run after terraform update step completed 
+    needs: ['apply_terraform_changes', 'push_docker_image']
 
     # use test workflow
     uses: ./.github/workflows/tests.yml
     secrets:
       AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    with:
+      environment: 'dev'
+
+
+#####################
+# if push, apply exact changes to prod version
+#####################
+  promote_to_prod:
+
+    runs-on: 'ubuntu-latest'
+
+    if: ${{ github.event_name == 'push' }}
+
+    steps:
+      # clone repo, set up terraform CLI
+      - name: clone repo
+        uses: actions/checkout@v4
+
+        # set up terraform CLI
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v4
+
+        # get key name for model artifact from devel as well as ECR repo name, to pull image from this
+      - name: get ssm params
+        run: |
+
+          echo "MODEL_BUCKET_NAME_DEV=$(aws ssm get-parameter  --name model-bucket-name-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_KEY_NAME_DEV=$(aws ssm get-parameter --name model-key-name-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "IMAGE_URI_DEV=$(aws ssm get-parameter --name image-uri-credit-risk-classifier-dev --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "MODEL_BUCKET_NAME_PROD=$(aws ssm get-parameter  --name model-bucket-name-credit-risk-classifier-prod --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+          echo "ECR_REPO_URL_PROD=$(aws ssm get-parameter --name ecr-repo-url-credit-risk-classifier-prod --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+
+      # copy model artifact from dev to prod
+      - name: copy over model artifact to prod s3 and update ssm parameter
+        run: |
+          aws s3 cp s3://${MODEL_BUCKET_NAME_DEV}/${MODEL_KEY_NAME_DEV} s3://${MODEL_BUCKET_NAME_PROD}/${MODEL_KEY_NAME_DEV}
+        
+      - name: promote image from dev to prod
+        run: |
+          docker pull $IMAGE_URI_DEV
+          docker tag $ECR_REPO_URL_PROD:${{ github.sha }}
+          docker push $ECR_REPO_URL_PROD:${{ github.sha }}
+      
+      - name: run terraform apply to enact changes
+        run: |
+          terraform init
+          terraform validate 
+          terraform apply -auto-approve=true -var-file=prod.tfvars -var "image_uri=${IMAGE_URI}" -var "model_key_name=${MODEL_KEY_NAME}"
+        
+        working-directory:
+          ./infra/environments/prod
+      
+      - name: wait for API and lambda to finish updating
+        run: |
+          sleep 15
+      
+
+  # final integration tests on prod
+  final_tests:
+
+    needs: ['promote_to_prod']
+
+    # use test workflow
+    uses: ./.github/workflows/tests.yml
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    with:
+      environment: 'prod'
 
       
         

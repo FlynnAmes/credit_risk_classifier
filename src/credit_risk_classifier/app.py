@@ -1,4 +1,5 @@
-""" API that takes data and returns simple true or false prediction for default or not """
+""" API that takes in feature data and return prediction for default (along with assoviated probability), configured
+to run on AWS as well as locally (configured with environment variable)"""
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -18,8 +19,9 @@ from mangum import Mangum
 # Functions for setup
 #####################
 
-def setup_logger(env):
-    """ set up logger, either logging to cloudwatch if on AWS, to if local file where running locally """
+def setup_logger(env: str):
+    """ set up logger, either logging to cloudwatch if on AWS, to if local file where running locally (configured
+    via env argument) """
 
     # set up default logger
     logger = logging.getLogger()
@@ -47,11 +49,13 @@ def setup_logger(env):
     return logger
 
 
-def load_model_from_S3():
-    """ loads model from S3 from AWS """
+def load_model_from_S3(bucket_name: str, key_name: str):
+    """ loads model from S3 from AWS.
+     Arguments are name of s3 bucket containing the model artifact, and key for the artifact itself
+      (configured via env argument) """
 
     # get the model object using an s3 client
-    model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier-tf', Key='standard.pkl')
+    model_obj = boto3.client('s3').get_object(Bucket=bucket_name, Key=key_name)
     # then get the model by passing through BytesIO, and loading via pickle
     body = model_obj['Body'].read()
     model = pkl.load(BytesIO(body))
@@ -66,7 +70,7 @@ def save_model_to_cache(model_object):
         pkl.dump(model_object, f)
 
 
-def load_production_model(env):
+def load_production_model(env: str):
     """ load production model, either from S3 (cold start) and caching in tmp. 
         If model already cached, then load from the cache (warm start) """
 
@@ -75,7 +79,7 @@ def load_production_model(env):
         # if model is not cached, then load and cache it
         if not os.path.exists(MODEL_CACHE_PATH):
             # load model
-            model = load_model_from_S3()
+            model = load_model_from_S3(bucket_name=BUCKET_NAME, key_name=KEY_NAME)
             logger.info('model loaded from S3')
             # and cache it for future use
             try:
@@ -92,7 +96,7 @@ def load_production_model(env):
 
             except Exception as e:
                 logger.warning(f'model load from cache failed with exception {e}. Loading from S3 instead')
-                model = load_model_from_S3()
+                model = load_model_from_S3(bucket_name=BUCKET_NAME, key_name=KEY_NAME)
     else:
         # if not on aws, load model from local path
         with open(model_local_path, 'rb') as f:
@@ -109,6 +113,9 @@ env = os.getenv("ENV", "local")
 if env not in set(('aws', 'local')):
     raise ValueError(f'environment variable env is currently {env}, should either be aws or local')
 
+# set up the logger
+logger = setup_logger(env)
+
 #############
 # set constants
 #############
@@ -120,6 +127,9 @@ if env == 'aws':
     # these are stored in SSM. In aws, they are set as environment variables
     BUCKET_NAME = os.getenv('model_bucket_name')
     KEY_NAME = os.getenv('model_key_name')
+
+    logger.info(f'model bucket name is: {BUCKET_NAME}')
+    logger.info(f'model key name is: {KEY_NAME}')
 
     # raise error if not defined
     if BUCKET_NAME is None or KEY_NAME is None:
@@ -145,10 +155,8 @@ else:
         )
 
 ###############
-# set up logger and load in model
+# load in model
 ###############
-
-logger = setup_logger(env)
 
 model = load_production_model(env)
 logger.info('model loading completed')
@@ -209,4 +217,4 @@ def ready():
     if model is None:
         raise HTTPException(status_code=503, detail='model not yet loaded')
     else:
-        return {'status': 'ready'} 
+        return {'status': 'ready'}

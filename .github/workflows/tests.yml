@@ -8,12 +8,20 @@ on:
                 required: true
             AWS_SECRET_ACCESS_KEY:
                 required: true
+        
+        inputs:
+          environment: 
+            description: "environment (dev or prod) to test"
+            type: string
+            required: true
 
-# test auto-run on a pull request to master
-    pull_request:
-        branches: ['master']
 # test can be manually triggered
     workflow_dispatch:
+      inputs:
+          environment: 
+            description: "environment (devel or prod) to test"
+            type: string
+            required: true
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
@@ -32,18 +40,18 @@ jobs:
             # set env variable for the url of the api
             - name: get api url
               run: |
-                echo "API_URL=$(aws ssm get-parameter --name api_url --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
+                echo "API_URL=$(aws ssm get-parameter --name api-url-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
             
-            # get lambda function name if not already specified
-            - name: get lambda function name
-              run: |
-                echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda_function_name --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
+            # # get lambda function name if not already specified
+            # - name: get lambda function name
+            #   run: |
+            #     echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda-function-name-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
 
             # set up python with version 3.14
             - name: set up python
               uses: actions/setup-python@v5
               with: 
-                python-version: '3.14'
+                python-version: '3.13'
                 # cache environment for faster loading of requirements later
                 cache: 'pip'
             
@@ -62,12 +70,21 @@ jobs:
               run: |
                 python -m pytest tests/ -m unit
             
-            - name: check lambda function being defined
-              run: |
-                env | grep 'LAMBDA'
 
+            # check that service is actually ready with a health check for 10 lots of 5 seconds 
+            - name: check service ready
+              run: |
+                for i in {1..10}; do
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health")
+
+                  if [ "$STATUS" -eq 200 ]; then
+                    echo "service is ready"
+                    break
+                  fi
+                  sleep 5
+                done
+                
             # and the integration tests (first make sure that function has finished updating if this is occurring)
             - name: run integration tests
               run: |
-                aws lambda wait function-updated --function-name $LAMBDA_FUNC_NAME
                 python -m pytest tests/ -m integration

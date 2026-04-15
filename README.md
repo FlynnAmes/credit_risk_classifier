@@ -51,7 +51,7 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 │  
 ├── examples/                      # example json payload file for POST request
 │ 
-├── infra/                         # Terraform files for managing aws infrastructure
+├── infra/                         # Terraform files for managing aws infrastructure (dev/prod environments)
 │ 
 ├── logs/                          # training, validation, and inference logs (gitignored)
 ├── models/                        # trained model artifacts (gitignored except one demo artifact)
@@ -93,6 +93,7 @@ All artifacts can be regenerated using the training pipeline.
 - Implemented model caching in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise cold-start latency 
 - Applied API rate and burst limiting to prevent abuse
 - Designed system to separate training and inference concerns, with model artifacts stored in S3 and loaded dynamically at runtime
+- Instantenous inference chosen over batch inference to simulate a fast-response, real-time prediction (as if using a mobile app)
 
 
 ## Model
@@ -118,7 +119,7 @@ Therefore, probabilities of default, obtained during inference, should not be in
 The API is live on AWS Lambda and a prediction can be obtained via a POST HTTP request (i.e., one command, no setup), by running the following in a linux terminal
 
 ``` 
-curl -X POST https://dcq552h5h8.execute-api.eu-west-2.amazonaws.com/predict \
+curl -X POST https://wb4so1vnna.execute-api.eu-west-2.amazonaws.com/predict \
 -H "Content-Type: application/json" \
 -d @features.json
 ```
