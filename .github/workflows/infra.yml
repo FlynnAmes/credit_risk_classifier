@@ -18,6 +18,10 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+# create concurrency group with other jobs where terraform apply is run (because of state locking)
+concurrency:
+  group: "infra_changer_group"
+  cancel-in-progress: false
 
 jobs:
 
