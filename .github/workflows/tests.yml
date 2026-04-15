@@ -41,11 +41,6 @@ jobs:
             - name: get api url
               run: |
                 echo "API_URL=$(aws ssm get-parameter --name api-url-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV
-            
-            # # get lambda function name if not already specified
-            # - name: get lambda function name
-            #   run: |
-            #     echo "LAMBDA_FUNC_NAME=$(aws ssm get-parameter --name lambda-function-name-credit-risk-classifier-${{ inputs.environment }} --query 'Parameter.Value' --output text | tr -d '"')" >> $GITHUB_ENV 
 
             # set up python with version 3.14
             - name: set up python

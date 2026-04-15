@@ -1,6 +1,4 @@
-""" This file takes input data from API (assuming pydantic baseModel subclass, see schemas.py),
- assuming individual inference rather than batch.
-For now just returns the binary prediction about whether delinquent or not """
+""" Model inference layer """
 
 import pandas as pd
 import numpy as np
@@ -8,11 +6,10 @@ from credit_risk_classifier.schemas import features
 
 
 def return_inference(input_features, model_object):
-    """ Main function that takes input feature data (a pydantic baseModel subclass object) and returns 
-     simple 1 or 0 prediction for whether for delinquency, which the 
-      'app' will then be able to use to decide whether to quick-accept/reject.
-       
-      other argument is the XGB model object """
+    """ Main function that takes input feature data (a pydantic baseModel subclass object), 
+    returning predicted class (default/non-default), along with probability and threshold
+    used to make the decision
+    arguments are features data (validated with pydantic), along with XGB model object """
 
 
     # test whether or not input actually is pydantic baseModel feature object

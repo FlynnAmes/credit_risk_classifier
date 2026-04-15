@@ -1,5 +1,4 @@
-""" Train and track the performance of a logistic regression model , as well as an XGboost model, 
-in predicting credit risk for a simple benchmark dataset """
+""" Model training layer """
 
 import os
 import pandas as pd
@@ -23,9 +22,8 @@ from credit_risk_classifier.paths import LOGS_PATH, MODELS_PATH, CONFIG_PATH, DA
 
 def log_training_params(clf, model_name: str):
     """ Logs hyperparameters of sklearn estimators, as well as
-      cross validation results obtained during training, and feature names for the XGboost
-      Logs are saved using the current date, along with a name given to the model, to 
-      the logs/ directory
+      cross validation results obtained during training, and feature names for the XGBoost.
+      Logs are saved using the current date, along with a name given to the model.
 
       clf: the trained and tuned model pipeline RandomSearchCV object
       model_name: the name of the model (string), used for saving """
@@ -53,7 +51,7 @@ def log_training_params(clf, model_name: str):
 
 
 def save_model(clf, model_name):
-    """ saves the ML model to the models directory in pickle format, using model name (along 
+    """ saves ML model in pickle format, using model name (along 
      with MODELS PATH defined in paths.py) """
 
     # create directory if doesn't already exists

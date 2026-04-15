@@ -1,4 +1,4 @@
-""" unit tests for testing API """
+""" unit tests for API """
 
 import pytest
 from credit_risk_classifier.app import app

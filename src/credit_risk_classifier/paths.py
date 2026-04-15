@@ -1,5 +1,4 @@
-""" computes path to root of project directory, as well as other paths referenced 
-in the project"""
+""" Path to root of project directory, as well as other local paths commonly referenced """
 
 from pathlib import Path
 
