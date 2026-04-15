@@ -45,7 +45,6 @@ variable "api_url" {
   
 }
 
-
 # name of environment that running in (e.g., devel, prod)
 variable "environment" {
     type        = string

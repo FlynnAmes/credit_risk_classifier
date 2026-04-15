@@ -44,8 +44,8 @@ module "ssm" {
 }
 
 module "api_gateway" {
-  source           = "../../modules/api_gateway"
-  api_gateway_name = "${var.project}-${var.environment}"
-  lambda_arn       = module.lambda.lambda_arn
+  source               = "../../modules/api_gateway"
+  api_gateway_name     = "${var.project}-${var.environment}"
+  lambda_arn           = module.lambda.lambda_arn
   lambda_function_name = module.lambda.lambda_function_name
 }
