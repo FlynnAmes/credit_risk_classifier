@@ -1,7 +1,6 @@
 ## Overview
 
-![CI](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/training_and_app.yml/badge.svg?event=push)
-
+![CI/CD](https://github.com/FlynnAmes/credit_risk_classifier/actions/workflows/ci-cd.yml/badge.svg)
 
 This project implements an end-to-end machine learning system for predicting
 loan default risk in real time.
@@ -9,11 +8,41 @@ loan default risk in real time.
 The system is deployed on AWS, with infrastructure defined via Terraform (IaC), structured as:
 
 ```
-                          Amazon ECR (docker image)
-                                           ⇓
-Client request ⇔ Amazon API Gateway ⇔ AWS Lambda ⇐ Amazon S3 (model)
-                              ⇓            ⇓
-                          Amazon CloudWatch (logs)
+                      
+                         ┌────────────────────┐ 
+                         │   GitHub Actions   │ 
+                         │   CI/CD pipeline   │ 
+                         └─────────┬──────────┘ 
+                                   ├─ upload artifact   
+                                   ├─ push docker image          
+                                   ▼                      
+                         ┌─────────────────────┐ 
+                         │   Terraform (IaC)   │
+                         └────────┬────────────┘ 
+                                  ├─ provision infrastructure                
+                                  │    
+                                  ▼   
+
+             ┌ ─ ─  ─ ─│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│─ ─ ─ ─ ─ ─ ┐
+                        
+                ┌────────────────┐    ┌─────────────────┐            
+                │   Amazon ECR   │    │    Amazon S3    │
+                │  Docker image  │    │  Model artifact │            
+                └────────┬───────┘    └────────┬────────┘
+                         ├─ pull               ├─ load                  
+                         ▼                     ▼
+                   ┌──────────────────────────────────┐            
+                   │       API Gateway + Lambda       │
+                   │         Inference endpoint       │            
+                   └────▲──────────────┬────────────┬─┘
+                        │              │            │            
+                        │              │            │     ┌─────────────────────┐
+                        ├─ request     ├─ response  └────►│  CloudWatch (logs)  │
+                        │              │                  └─────────────────────┘
+                        │ ┌─────────┐  │                      
+                        └─│ Client  │◄─┘
+                          └─────────┘                                   
+
 ```
 
 
@@ -22,9 +51,8 @@ and including:
 
 - A containerised API (FastAPI; image stored in ECR) deployed to AWS Lambda via API Gateway
 - Infrastructure defined using Terraform (IaC) with remote state storage (S3 + locking)
+- CI/CD for model retraining, image rebuilds, and infrastructure deployment (GitHub Actions + Pytest)
 - Inference logging (CloudWatch)
-- Automated testing via Pytest with CI pipeline (GitHub Actions)
-- Infrastructure deployment currently managed separately via Terraform CLI (CI/CD extension planned)
 - Data preprocessing and validation pipelines (Pandas + NumPy + scikit-learn + XGBoost) separated from inference code.
 
 
@@ -32,14 +60,14 @@ and including:
 
 The API returns:
 
-- predicted default class
+- predicted class (default / non-default)
 - probability of default
 - decision threshold used for classification 
 
 <br>
 
 
-The system is designed to operate within AWS free-tier constraints. Note it can also be run locally (see later section).
+The system is designed to operate within AWS free-tier constraints. The system can also be run locally (see later section).
 
 
 ## Repository Structure
@@ -50,11 +78,13 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 │   └── raw/   
 │  
 ├── examples/                      # example json payload file for POST request
-│ 
-├── infra/                         # Terraform files for managing aws infrastructure (dev/prod environments)
-│ 
+│   
+├── infra/                         # Terraform for managing aws infrastructure (dev/prod)
+│   ├── environments/             
+│   └── modules/ 
+│
 ├── logs/                          # training, validation, and inference logs (gitignored)
-├── models/                        # trained model artifacts (gitignored except one demo artifact)
+├── models/                        # trained model artifacts (gitignored except demo artifact)
 ├── notebooks/                     # exploratory analysis
 │
 ├── src/credit_risk_classifier/    # training, validation, and inference code
@@ -79,21 +109,23 @@ The system is designed to operate within AWS free-tier constraints. Note it can 
 ```
 
 
-Models (excluding one demo artifact), processed data, and logs are excluded from version control. <br>
+Models (excluding a singular demo artifact), processed data, and logs are excluded from version control. <br>
 All artifacts can be regenerated using the training pipeline.
 
 
 ## Engineering decisions
 
 
-- Defined complete AWS infrastructure using Terraform (Lambda, API Gateway, S3, ECR, IAM), enabling reproducible, version-controlled deployments
+- Defined complete AWS infrastructure using Terraform (Lambda, API Gateway, S3, ECR, IAM), to permit reproducible, version-controlled deployments. 
 - Configured remote state (S3 + locking) to prevent state-configuration drift
+- Configured promotion from dev to prod environments within CI/CD, using immutable image and model versioning (commit SHA), to maintain operational capacity and tracability of production model
 - Chose AWS Lambda over EC2 to minimise operational overhead and cost (to maintain live API within free-tier constraints), accepting cold start latency as a trade-off
+- Instantaneous inference chosen over batch inference to simulate a fast-response, real-time prediction
 - Ensured environment agnostic design (via environment variables), permitting both local and cloud deployment
 - Implemented model caching in /tmp during lambda invocation, to avoid repeated S3 downloads and minimise cold-start latency 
 - Applied API rate and burst limiting to prevent abuse
 - Designed system to separate training and inference concerns, with model artifacts stored in S3 and loaded dynamically at runtime
-- Instantenous inference chosen over batch inference to simulate a fast-response, real-time prediction (as if using a mobile app)
+
 
 
 ## Model
@@ -124,7 +156,7 @@ curl -X POST https://wb4so1vnna.execute-api.eu-west-2.amazonaws.com/predict \
 -d @features.json
 ```
 
-where <i>features.json</i> is a file specifying 10 input features (validated by the API using Pydantic schemas - see src/schemas.py).
+where <i>features.json</i> is a file specifying 10 input features (validated by the API using Pydantic schemas - see schemas.py).
 
 A correctly formatted example is pasted below, also provided in examples/features.json: 
 
@@ -186,7 +218,6 @@ When running locally, the probability threshold (lenient, standard, aggressive) 
 
 ## Future extensions
 
-- CI/CD for infrastructure deployment (Terraform plan/apply)
 - Model monitoring using inference logs (data drift)
 - Experiment tracking and model versioning (MLflow)
 
