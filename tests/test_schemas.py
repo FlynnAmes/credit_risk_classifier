@@ -1,4 +1,4 @@
-""" Tests for input and output schemas using pytest """
+""" Tests for input and output schemas """
 
 import pytest
 from credit_risk_classifier.schemas import features, prediction

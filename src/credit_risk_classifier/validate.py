@@ -1,5 +1,5 @@
-""" Validate ML models using the remaining data, compute classification scores 
-(namely recall), and save these """
+""" Validates ML models using the remaining holdout dataset. Computes classification scores 
+(namely recall), and logs these """
 
 import os
 from pathlib import Path
@@ -27,9 +27,6 @@ def log_validation_params(y_pred, y_validate, model_name: str, scoring_name: str
      y_pred_proba: The probability of positive classification (here default). If set,
      will compute and log the brer score, to get measure of calibration of predicted probabilities
      """
-    
-#TODO: need to put in something so diesn't fail silently when tune.py not exist.
-# TODO: compute metrics for pretuned models as well to compare effects of tuning
 
     # get scoring metrics (including recall)
     scoring_metrics = classification_report(y_true=y_validate, y_pred=y_pred, output_dict=True)

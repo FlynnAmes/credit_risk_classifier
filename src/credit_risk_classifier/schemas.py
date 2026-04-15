@@ -1,4 +1,4 @@
-""" Defining the pydantic classes for input features and outputted predictions """
+"""  Pydantic classes for input features and outputted predictions """
 
 from pydantic import BaseModel
 

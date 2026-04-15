@@ -1,4 +1,4 @@
-""" integration tests for testing running, containerised version of API """
+""" integration tests for API on AWS """
 
 import pytest
 import requests

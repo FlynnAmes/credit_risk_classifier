@@ -1,4 +1,4 @@
-""" API that takes in feature data and return prediction for default (along with assoviated probability), configured
+""" API that takes in feature data and return predicted class(default/non-default, along with associated probability), configured
 to run on AWS as well as locally (configured with environment variable)"""
 
 from fastapi import FastAPI
