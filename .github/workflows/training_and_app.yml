@@ -16,10 +16,10 @@ on:
     branches: ['master']
     paths: ['src/**', 'config.*']
 
-# create concurrency group with other jobs where terraform apply is run (because of state locking)
-concurrency:
-  group: "infra_changer_group"
-  cancel-in-progress: false
+# # create concurrency group with other jobs where terraform apply is run (because of state locking)
+# concurrency:
+#   group: "infra_changer_group"
+#   cancel-in-progress: false
 
 # set default region across all jobs, aswell as credentials to allow CLI calls
 env: 
