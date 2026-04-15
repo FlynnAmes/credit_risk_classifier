@@ -108,7 +108,7 @@ jobs:
         # apply
         - name: apply terraform changes
           run: |
-            terraform apply -auto-approve var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}"
+            terraform apply -auto-approve -var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}"
           working-directory: ./infra/environments/prod
         
         - name: wait for API and lambda to finish updating

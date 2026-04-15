@@ -3,7 +3,6 @@ resource "aws_ssm_parameter" "image_uri" {
   name  = "image-uri-${var.project}-${var.environment}"
   type  = "String"
   value = var.image_uri
-
 }
 
 # name of model artifact 'file' (passed in as argument upon terraform apply)
@@ -11,7 +10,6 @@ resource "aws_ssm_parameter" "model_key_name" {
   name  = "model-key-name-${var.project}-${var.environment}"
   type  = "String"
   value = var.model_key_name
-
 }
 
 # name of bucket containing model artifact
@@ -19,7 +17,6 @@ resource "aws_ssm_parameter" "model_bucket_name" {
   name  = "model-bucket-name-${var.project}-${var.environment}"
   type  = "String"
   value = var.s3_bucket_name
-
 }
 
 # name of the ecr repository
