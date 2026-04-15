@@ -72,7 +72,7 @@ jobs:
             - name: init, validate and create terraform plan
               run: |
                 terraform init
-                terraform plan  2>&1 var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}" -no-color -lock=false | tee tf_plan.txt
+                terraform plan 2>&1 -var-file=prod.tfvars -var "image_uri=${{ needs.get_aws_params.outputs.image_uri }}" -var "model_key_name=${{ needs.get_aws_params.outputs.model_key_name }}" -no-color -lock=false | tee tf_plan.txt
               # make sure runs in the infra dir!
               working-directory: ./infra/environments/prod
             
