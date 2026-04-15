@@ -47,11 +47,12 @@ def setup_logger(env):
     return logger
 
 
-def load_model_from_S3():
-    """ loads model from S3 from AWS """
+def load_model_from_S3(bucket_name: str, key_name: str):
+    """ loads model from S3 from AWS.
+     Arguments are name of s3 bucket containing the model artifact, and key for the artifact itself """
 
     # get the model object using an s3 client
-    model_obj = boto3.client('s3').get_object(Bucket='credit-risk-classifier-tf', Key='standard.pkl')
+    model_obj = boto3.client('s3').get_object(Bucket=bucket_name, Key=key_name)
     # then get the model by passing through BytesIO, and loading via pickle
     body = model_obj['Body'].read()
     model = pkl.load(BytesIO(body))
@@ -75,7 +76,7 @@ def load_production_model(env):
         # if model is not cached, then load and cache it
         if not os.path.exists(MODEL_CACHE_PATH):
             # load model
-            model = load_model_from_S3()
+            model = load_model_from_S3(bucket_name=BUCKET_NAME, key_name=KEY_NAME)
             logger.info('model loaded from S3')
             # and cache it for future use
             try:
@@ -92,7 +93,7 @@ def load_production_model(env):
 
             except Exception as e:
                 logger.warning(f'model load from cache failed with exception {e}. Loading from S3 instead')
-                model = load_model_from_S3()
+                model = load_model_from_S3(bucket_name=BUCKET_NAME, key_name=KEY_NAME)
     else:
         # if not on aws, load model from local path
         with open(model_local_path, 'rb') as f:
