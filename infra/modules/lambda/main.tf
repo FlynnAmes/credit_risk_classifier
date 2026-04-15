@@ -49,5 +49,4 @@ resource "aws_lambda_function" "lambda" {
       model_key_name    = var.model_key_name
     }
   }
-
 }
