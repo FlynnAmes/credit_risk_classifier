@@ -50,6 +50,7 @@ jobs:
               run: |
                 terraform init
                 terraform validate 
+                terraform plan -no-color 2>&1 -lock=false
                 terraform plan -no-color 2>&1 -lock=false | tee tf_plan.txt
               # make sure runs in the infra dir!
               working-directory: ./infra/environments/prod
