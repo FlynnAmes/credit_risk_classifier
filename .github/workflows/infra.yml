@@ -83,6 +83,10 @@ jobs:
           run: |
             terraform apply --auto-approve
           working-directory: ./infra/environments/prod
+        
+        - name: wait for API and lambda to finish updating
+          run: |
+            sleep 15
 
 ############################
 # run integration tests after applying terraform changes

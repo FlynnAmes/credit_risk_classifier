@@ -3,7 +3,7 @@
 from pydantic import BaseModel
 
 # define class for input data
-# for now forcing variables that should be integers to be integers
+# forcing variables that should be integers to be integers etc.
 class features(BaseModel):
     rev_util: float
     age: int

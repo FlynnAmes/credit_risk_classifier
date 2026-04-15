@@ -1,4 +1,5 @@
-""" API that takes data and returns simple true or false prediction for default or not """
+""" API that takes in feature data and return prediction for default (along with assoviated probability), configured
+to run on AWS as well as locally (configured with environment variable)"""
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -18,8 +19,9 @@ from mangum import Mangum
 # Functions for setup
 #####################
 
-def setup_logger(env):
-    """ set up logger, either logging to cloudwatch if on AWS, to if local file where running locally """
+def setup_logger(env: str):
+    """ set up logger, either logging to cloudwatch if on AWS, to if local file where running locally (configured
+    via env argument) """
 
     # set up default logger
     logger = logging.getLogger()
@@ -49,7 +51,8 @@ def setup_logger(env):
 
 def load_model_from_S3(bucket_name: str, key_name: str):
     """ loads model from S3 from AWS.
-     Arguments are name of s3 bucket containing the model artifact, and key for the artifact itself """
+     Arguments are name of s3 bucket containing the model artifact, and key for the artifact itself
+      (configured via env argument) """
 
     # get the model object using an s3 client
     model_obj = boto3.client('s3').get_object(Bucket=bucket_name, Key=key_name)
@@ -67,7 +70,7 @@ def save_model_to_cache(model_object):
         pkl.dump(model_object, f)
 
 
-def load_production_model(env):
+def load_production_model(env: str):
     """ load production model, either from S3 (cold start) and caching in tmp. 
         If model already cached, then load from the cache (warm start) """
 
