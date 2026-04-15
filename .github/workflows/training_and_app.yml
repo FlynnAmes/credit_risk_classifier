@@ -239,7 +239,7 @@ jobs:
         run: |
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 772928963391.dkr.ecr.eu-west-2.amazonaws.com
           docker pull $IMAGE_URI_DEV
-          docker tag $ECR_REPO_URL_PROD:${{ github.sha }}
+          docker tag $IMAGE_URI_DEV $ECR_REPO_URL_PROD:${{ github.sha }}
           docker push $ECR_REPO_URL_PROD:${{ github.sha }}
       
       - name: run terraform apply to enact changes

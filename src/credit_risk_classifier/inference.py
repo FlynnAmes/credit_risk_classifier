@@ -26,8 +26,8 @@ def return_inference(input_features, model_object):
     # singular inference here)
     data_df = pd.DataFrame.from_dict([feature_dict])
  
-    # REORDER columns to be same as used in model (because xgboost converts to arrays internally, 
-    # so ordering of feaftures matter). Use .loc method for this
+    # reorder columns to be same as used in model (because xgboost converts to arrays internally, 
+    # so ordering of feaftures matter).
     data_df_reordered = data_df.loc[:, model_object.feature_names_in_]
 
     # then get predictions using the data (pipeline object takes care of preprocessing)
